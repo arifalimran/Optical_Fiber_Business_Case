@@ -1,101 +1,54 @@
+"use client";
+
 import Link from "next/link";
-import { Separator } from "@/components/ui/separator";
+import { useAuth } from "@/lib/auth/useAuth";
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
+  const { user } = useAuth();
 
   return (
-    <footer className="border-t bg-background">
-      <div className="container mx-auto px-6 py-6">
-        <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
-          {/* Company Info */}
-          <div className="space-y-3">
-            <h3 className="font-semibold">Optical Fiber Business</h3>
-            <p className="text-sm text-muted-foreground">
-              Professional fiber optic project management and cost calculation platform for Bangladesh market.
+    <footer className="border-t bg-gradient-to-r from-background via-muted/10 to-background backdrop-blur-sm">
+      <div className="container mx-auto px-6 py-4">
+        {/* Compact Single Row */}
+        <div className="flex flex-col items-center justify-between gap-3 text-sm text-muted-foreground md:flex-row">
+          {/* Left: Copyright and User Info */}
+          <div className="flex flex-col items-center gap-2 md:flex-row md:gap-4">
+            <p className="flex items-center gap-2">
+              <span className="font-semibold text-foreground">©</span>
+              <span>{currentYear} Optical Fiber Business Case</span>
             </p>
+            {user && (
+              <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-primary/5 border border-primary/10">
+                <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                <p className="text-xs">
+                  <span className="font-semibold text-foreground">{user.fullName}</span>
+                  <span className="mx-1.5">·</span>
+                  <span className={`font-medium ${
+                    user.role === 'ADMIN' ? 'text-purple-600' : 
+                    user.role === 'APPROVER' ? 'text-blue-600' : 
+                    'text-green-600'
+                  }`}>{user.role}</span>
+                </p>
+              </div>
+            )}
           </div>
 
-          {/* Quick Links */}
-          <div className="space-y-3">
-            <h4 className="font-semibold text-sm">Quick Links</h4>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              <li>
-                <Link href="/" className="hover:text-foreground transition-colors">
-                  Dashboard
-                </Link>
-              </li>
-              <li>
-                <Link href="/projects" className="hover:text-foreground transition-colors">
-                  Projects
-                </Link>
-              </li>
-              <li>
-                <Link href="/calculator" className="hover:text-foreground transition-colors">
-                  Calculator
-                </Link>
-              </li>
-              <li>
-                <Link href="/reports" className="hover:text-foreground transition-colors">
-                  Reports
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* Resources */}
-          <div className="space-y-3">
-            <h4 className="font-semibold text-sm">Resources</h4>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              <li>
-                <Link href="/docs" className="hover:text-foreground transition-colors">
-                  Documentation
-                </Link>
-              </li>
-              <li>
-                <Link href="/api" className="hover:text-foreground transition-colors">
-                  API Reference
-                </Link>
-              </li>
-              <li>
-                <Link href="/support" className="hover:text-foreground transition-colors">
-                  Support
-                </Link>
-              </li>
-              <li>
-                <Link href="/about" className="hover:text-foreground transition-colors">
-                  About Us
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* Contact */}
-          <div className="space-y-3">
-            <h4 className="font-semibold text-sm">Contact</h4>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              <li>Dhaka, Bangladesh</li>
-              <li>info@opticalfiber.com</li>
-              <li>+880 1XXX-XXXXXX</li>
-            </ul>
-          </div>
-        </div>
-
-        <Separator className="my-6" />
-
-        {/* Bottom Bar */}
-        <div className="flex flex-col items-center justify-between gap-4 text-sm text-muted-foreground md:flex-row">
-          <p>© {currentYear} Optical Fiber Business Case. All rights reserved.</p>
-          <div className="flex gap-6">
-            <Link href="/privacy" className="hover:text-foreground transition-colors">
-              Privacy Policy
-            </Link>
-            <Link href="/terms" className="hover:text-foreground transition-colors">
-              Terms of Service
-            </Link>
-            <Link href="/cookies" className="hover:text-foreground transition-colors">
-              Cookie Policy
-            </Link>
+          {/* Right: Quick Links */}
+          <div className="flex items-center gap-1">
+            {[
+              { href: '/', label: 'Dashboard' },
+              { href: '/projects', label: 'Projects' },
+              { href: '/settings', label: 'Settings' }
+            ].map((link, i) => (
+              <Link 
+                key={link.href}
+                href={link.href} 
+                className="px-3 py-1.5 text-xs font-medium rounded-lg hover:text-foreground hover:bg-accent/50 transition-all duration-200 hover:scale-105"
+              >
+                {link.label}
+              </Link>
+            ))}
           </div>
         </div>
       </div>

@@ -8,8 +8,9 @@ import path from 'path';
 // Load environment variables from .env file
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
-// Create PostgreSQL connection pool
-const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+// Create Prisma client with adapter
+const connectionString = process.env.DATABASE_URL || 'postgresql://mac:@localhost:5433/optical_fiber_dev';
+const pool = new pg.Pool({ connectionString });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 

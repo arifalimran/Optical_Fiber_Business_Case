@@ -46,12 +46,12 @@ export function TopBar({ onMenuClick }: TopBarProps) {
   };
 
   return (
-    <header className="sticky top-0 z-50 flex h-16 items-center gap-4 border-b bg-background px-6">
+    <header className="sticky top-0 z-50 flex h-16 items-center gap-4 border-b bg-background/80 backdrop-blur-md px-6 shadow-sm">
       {/* Mobile Menu Button */}
       <Button
         variant="ghost"
         size="icon"
-        className="md:hidden"
+        className="md:hidden hover:bg-primary/10"
         onClick={onMenuClick}
       >
         <Menu className="h-5 w-5" />
@@ -59,25 +59,26 @@ export function TopBar({ onMenuClick }: TopBarProps) {
 
       {/* Search Bar */}
       <div className="flex-1 max-w-md">
-        <div className="relative">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+        <div className="relative group">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground transition-colors group-focus-within:text-primary" />
           <input
             type="search"
             placeholder="Search projects, reports..."
-            className="w-full rounded-lg border border-input bg-background pl-8 pr-4 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            className="w-full rounded-xl border border-border bg-muted/30 pl-10 pr-4 py-2.5 text-sm ring-offset-background placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 focus:bg-background transition-all duration-200 hover:bg-muted/50"
           />
         </div>
       </div>
 
+      {/* Spacer */}
+      <div className="flex-1" />
+
       {/* Right Side Actions */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 ml-auto">
         {/* Notifications */}
         <DropdownMenu>
-          <DropdownMenuTrigger>
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="h-5 w-5" />
-              <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-red-600" />
-            </Button>
+          <DropdownMenuTrigger className="relative inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent hover:text-accent-foreground h-10 w-10">
+            <Bell className="h-5 w-5" />
+            <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-red-600" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-80">
             <DropdownMenuLabel>Notifications</DropdownMenuLabel>
@@ -103,13 +104,10 @@ export function TopBar({ onMenuClick }: TopBarProps) {
 
         {/* User Menu */}
         <DropdownMenu>
-          <DropdownMenuTrigger>
-            <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-              <Avatar className="h-10 w-10">
-                <AvatarImage src="/avatar.png" alt={user?.fullName || 'User'} />
-                <AvatarFallback>{getInitials()}</AvatarFallback>
-              </Avatar>
-            </Button>
+          <DropdownMenuTrigger className="relative inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-10 w-10">
+            <Avatar className="h-10 w-10">
+              <AvatarFallback>{getInitials()}</AvatarFallback>
+            </Avatar>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel>
@@ -144,6 +142,17 @@ export function TopBar({ onMenuClick }: TopBarProps) {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+
+        {/* Logout Button */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => logout()}
+          className="gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30 border-red-200 dark:border-red-900 transition-all duration-200 hover:shadow-md hover:scale-105"
+        >
+          <LogOut className="h-4 w-4" />
+          <span className="hidden sm:inline font-medium">Logout</span>
+        </Button>
       </div>
     </header>
   );

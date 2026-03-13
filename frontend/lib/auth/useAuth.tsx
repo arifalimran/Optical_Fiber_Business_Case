@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 
 export interface User {
   id: string;
@@ -27,11 +27,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const pathname = usePathname();
 
-  // Fetch current user on mount
+  // Fetch current user on mount (skip if on login page)
   useEffect(() => {
-    fetchUser();
-  }, []);
+    if (pathname !== '/login') {
+      fetchUser();
+    } else {
+      setLoading(false);
+    }
+  }, [pathname]);
 
   const fetchUser = async () => {
     try {
@@ -43,10 +48,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const data = await response.json();
         setUser(data.user);
       } else {
+        // 401 is expected when not logged in - don't log as error
         setUser(null);
       }
     } catch (error) {
-      console.error('Failed to fetch user:', error);
+      // Only log unexpected errors
+      if (error instanceof Error && !error.message.includes('401')) {
+        console.error('Failed to fetch user:', error);
+      }
       setUser(null);
     } finally {
       setLoading(false);
@@ -68,11 +77,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Login failed');
+        // Pass full error data including hint and field
+        throw new Error(JSON.stringify({
+          error: data.error || 'Login failed',
+          hint: data.hint || '',
+          field: data.field || ''
+        }));
       }
 
       setUser(data.user);
-      router.push('/'); // Redirect to dashboard
+      
+      // Show success message and redirect
+      if (typeof window !== 'undefined') {
+        const { toast } = await import('sonner');
+        toast.success(`Welcome back, ${data.user.fullName}!`, {
+          description: `Logged in as ${data.user.role}`,
+          duration: 2000,
+        });
+      }
+      
+      // Immediate redirect with slight delay for toast
+      await new Promise(resolve => setTimeout(resolve, 300));
+      window.location.href = '/';
     } catch (error) {
       setLoading(false);
       throw error;

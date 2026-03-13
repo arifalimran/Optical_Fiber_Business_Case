@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { verifyToken } from '@/lib/auth/jwt';
+import { verifyTokenEdge } from '@/lib/auth/jwt-edge';
 
 // Routes that don't require authentication
 const publicRoutes = ['/login', '/api/auth/login'];
@@ -19,9 +19,10 @@ const protectedRoutes = [
   '/api/templates',
   '/api/users',
   '/api/settings',
+  '/api/admin',
 ];
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Allow public routes
@@ -42,7 +43,7 @@ export function middleware(request: NextRequest) {
 
   if (isProtectedRoute) {
     // Get token from cookie
-    const token = request.cookies.get(process.env.SESSION_COOKIE_NAME || 'auth_token')?.value;
+    const token = request.cookies.get('auth_token')?.value;
 
     if (!token) {
       // Redirect to login if no token
@@ -51,8 +52,8 @@ export function middleware(request: NextRequest) {
       return NextResponse.redirect(loginUrl);
     }
 
-    // Verify token
-    const payload = verifyToken(token);
+    // Verify token (async Edge-compatible verification)
+    const payload = await verifyTokenEdge(token);
 
     if (!payload) {
       // Redirect to login if token invalid
@@ -62,7 +63,7 @@ export function middleware(request: NextRequest) {
       
       // Clear invalid cookie
       response.cookies.set({
-        name: process.env.SESSION_COOKIE_NAME || 'auth_token',
+        name: 'auth_token',
         value: '',
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',

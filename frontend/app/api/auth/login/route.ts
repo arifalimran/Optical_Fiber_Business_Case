@@ -23,7 +23,11 @@ export async function POST(request: NextRequest) {
 
     if (!user) {
       return NextResponse.json(
-        { error: 'Invalid email or password' },
+        { 
+          error: 'Email address not found',
+          hint: 'Please check your email address or contact your administrator for access.',
+          field: 'email'
+        },
         { status: 401 }
       );
     }
@@ -31,7 +35,11 @@ export async function POST(request: NextRequest) {
     // Check if user is active
     if (!user.isActive) {
       return NextResponse.json(
-        { error: 'Account is disabled. Contact administrator.' },
+        { 
+          error: 'Account is disabled',
+          hint: 'Your account has been deactivated. Please contact the system administrator to reactivate your account.',
+          field: 'account'
+        },
         { status: 403 }
       );
     }
@@ -41,7 +49,11 @@ export async function POST(request: NextRequest) {
     
     if (!isPasswordValid) {
       return NextResponse.json(
-        { error: 'Invalid email or password' },
+        { 
+          error: 'Incorrect password',
+          hint: 'The password you entered is incorrect. Please try again or reset your password.',
+          field: 'password'
+        },
         { status: 401 }
       );
     }
