@@ -1,0 +1,255 @@
+// Prisma Schema for Multi-Template Feasibility System
+// Database: PostgreSQL 14+
+// ORM: Prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================================================
+// USERS & AUTHENTICATION
+// ============================================================================
+
+enum UserRole {
+  ANALYST   // Can create and view own projects
+  APPROVER  // Can view all projects, approve/reject
+  ADMIN     // Full system access
+}
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  passwordHash  String    @map("password_hash")
+  fullName      String    @map("full_name")
+  role          UserRole  @default(ANALYST)
+  isActive      Boolean   @default(true) @map("is_active")
+  
+  // Timestamps
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  lastLoginAt   DateTime? @map("last_login_at")
+  
+  // Relations
+  sessions      Session[]
+  createdProjects Project[] @relation("CreatedProjects")
+  approvedProjects Project[] @relation("ApprovedProjects")
+  auditLogs     AuditLog[]
+  
+  @@map("users")
+}
+
+model Session {
+  id            String    @id @default(uuid())
+  userId        String    @map("user_id")
+  token         String    @unique
+  expiresAt     DateTime  @map("expires_at")
+  
+  // Device tracking
+  deviceInfo    String?   @map("device_info")
+  ipAddress     String?   @map("ip_address")
+  
+  // Timestamps
+  createdAt     DateTime  @default(now()) @map("created_at")
+  lastActivityAt DateTime @default(now()) @map("last_activity_at")
+  
+  // Relations
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([token])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+// ============================================================================
+// TEMPLATE SYSTEM
+// ============================================================================
+
+model ProjectTemplate {
+  id            String    @id @default(uuid())
+  templateCode  String    @unique @map("template_code") // OPTICAL_FIBER, 5G_TOWER_CONVERSION
+  templateName  String    @map("template_name")
+  category      String    // Telecom, Infrastructure, etc.
+  icon          String    // Icon name for UI
+  description   String    @db.Text
+  
+  // Schema definitions (JSONB)
+  inputSchema   Json      @map("input_schema")      // Form field definitions
+  costCategories Json     @map("cost_categories")   // Cost structure
+  revenueModel  Json      @map("revenue_model")     // Revenue calculation rules
+  
+  // Status
+  isActive      Boolean   @default(true) @map("is_active")
+  displayOrder  Int       @default(0) @map("display_order")
+  
+  // Timestamps
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  
+  // Relations
+  costParameters TemplateCostParameter[]
+  projects      Project[]
+  
+  @@map("project_templates")
+}
+
+model TemplateCostParameter {
+  id            String    @id @default(uuid())
+  templateCode  String    @map("template_code")
+  
+  // Parameter details
+  category      String    // Mobilization, Equipment, Manpower, etc.
+  itemName      String    @map("item_name")
+  rate          Float     // Cost per unit
+  unit          String    // per meter, per tower, per day, etc.
+  frequency     String?   // ONE_TIME, PER_METER, PER_RING, etc.
+  
+  // Conditional logic
+  isConditional Boolean   @default(false) @map("is_conditional")
+  condition     Json?     // Condition rules (JSONB)
+  
+  // Status
+  isActive      Boolean   @default(true) @map("is_active")
+  
+  // Timestamps
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  
+  // Relations
+  template      ProjectTemplate @relation(fields: [templateCode], references: [templateCode], onDelete: Cascade)
+  
+  @@index([templateCode])
+  @@index([category])
+  @@map("template_cost_parameters")
+}
+
+// ============================================================================
+// PROJECTS
+// ============================================================================
+
+enum ProjectStatus {
+  DRAFT                 // Being created
+  ANALYZING             // Calculation in progress
+  PENDING_APPROVAL      // Waiting for approver
+  APPROVED              // Approved for quotation
+  REJECTED              // Not feasible
+  QUOTATION_SENT        // Quote sent to client
+  CLIENT_APPROVED       // Client accepted
+  EXPORTED_TO_ERP       // Sent to ERP system
+  ARCHIVED              // Historical record
+}
+
+model Project {
+  id            String        @id @default(uuid())
+  templateCode  String        @map("template_code")
+  
+  // Basic info
+  projectName   String        @map("project_name")
+  clientName    String?       @map("client_name")
+  location      String?
+  description   String?       @db.Text
+  
+  // Ownership
+  createdBy     String        @map("created_by")
+  status        ProjectStatus @default(DRAFT)
+  
+  // Template-specific data (JSONB)
+  inputParameters Json        @map("input_parameters")     // User inputs
+  calculatedCosts Json?       @map("calculated_costs")     // Cost breakdown
+  calculatedRevenue Json?     @map("calculated_revenue")   // Revenue breakdown
+  
+  // Summary metrics
+  totalCost     Float?        @map("total_cost")
+  grossRevenue  Float?        @map("gross_revenue")
+  netProfit     Float?        @map("net_profit")
+  profitMargin  Float?        @map("profit_margin")       // Percentage
+  
+  // Approval workflow
+  approvedBy    String?       @map("approved_by")
+  approvedAt    DateTime?     @map("approved_at")
+  rejectionReason String?     @map("rejection_reason") @db.Text
+  
+  // Additional metadata
+  tags          String[]      @default([])
+  notes         String?       @db.Text
+  
+  // Timestamps
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+  
+  // Relations
+  template      ProjectTemplate @relation(fields: [templateCode], references: [templateCode])
+  creator       User           @relation("CreatedProjects", fields: [createdBy], references: [id])
+  approver      User?          @relation("ApprovedProjects", fields: [approvedBy], references: [id])
+  
+  @@index([templateCode])
+  @@index([createdBy])
+  @@index([status])
+  @@index([createdAt])
+  @@map("projects")
+}
+
+// ============================================================================
+// AUDIT & LOGGING
+// ============================================================================
+
+enum AuditAction {
+  // Authentication
+  LOGIN
+  LOGOUT
+  LOGIN_FAILED
+  PASSWORD_CHANGED
+  
+  // Projects
+  CREATE_PROJECT
+  UPDATE_PROJECT
+  DELETE_PROJECT
+  CALCULATE_PROJECT
+  APPROVE_PROJECT
+  REJECT_PROJECT
+  GENERATE_QUOTATION
+  EXPORT_TO_ERP
+  
+  // Settings
+  UPDATE_TEMPLATE
+  UPDATE_COST_PARAMETER
+  CREATE_USER
+  UPDATE_USER
+  DELETE_USER
+  
+  // System
+  SYSTEM_ERROR
+}
+
+model AuditLog {
+  id            BigInt      @id @default(autoincrement())
+  userId        String?     @map("user_id")
+  action        AuditAction
+  
+  // Resource tracking
+  resourceType  String?     @map("resource_type")  // Project, User, Template, etc.
+  resourceId    String?     @map("resource_id")
+  
+  // Details
+  details       Json?       // Additional context (JSONB)
+  
+  // Request metadata
+  ipAddress     String?     @map("ip_address")
+  userAgent     String?     @map("user_agent") @db.Text
+  
+  // Timestamp
+  createdAt     DateTime    @default(now()) @map("created_at")
+  
+  // Relations
+  user          User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  @@index([userId])
+  @@index([action])
+  @@index([resourceType, resourceId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}

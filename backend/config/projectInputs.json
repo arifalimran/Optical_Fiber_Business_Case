@@ -1,0 +1,456 @@
+{
+  "projectDetails": {
+    "totalUndergroundLength": {
+      "value": 30000,
+      "unit": "meters",
+      "description": "Total Underground Length (main HDD/trench)",
+      "notes": "Core driver for most costs"
+    },
+    "numberOfBridges": {
+      "value": 2,
+      "unit": "number"
+    },
+    "numberOfCulverts": {
+      "value": 5,
+      "unit": "number"
+    },
+    "numberOfRivers": {
+      "value": 1,
+      "unit": "number"
+    },
+    "numberOfRings": {
+      "value": 2,
+      "unit": "rings",
+      "notes": "Redundancy loops; affects hand holes, cores"
+    },
+    "numberOfLinks": {
+      "value": 10,
+      "unit": "number",
+      "notes": "Segments / interconnections"
+    },
+    "avgVerticalWorkPerLink": {
+      "value": 80,
+      "unit": "meters/link",
+      "notes": "Avg riser/drop length per link"
+    },
+    "numberOfVerticalLinks": {
+      "value": 10,
+      "unit": "links",
+      "notes": "Usually = Number of Links (formula)"
+    },
+    "numberOfCoreConnectionsPerLink": {
+      "value": 52,
+      "unit": "cores/link",
+      "notes": "Terminations / splices per link"
+    },
+    "numberOfFieldCoreJointConnectionsPerLink": {
+      "value": 8,
+      "unit": "joints/link",
+      "notes": "Mid-span joints per link"
+    },
+    "totalCoreConnectionsPerRing": {
+      "value": 520,
+      "unit": "cores/ring",
+      "notes": "Ring-level total (for aggregation)"
+    },
+    "projectDuration": {
+      "value": 3,
+      "unit": "months",
+      "notes": "Affects monthly costs"
+    },
+    "workingDaysPerMonth": {
+      "value": 24,
+      "unit": "days",
+      "notes": "For daily cost calcs"
+    },
+    "numberOfSites": {
+      "value": 2,
+      "unit": "sites",
+      "notes": "Affects mobilization"
+    },
+    "numberOfTrackerMachines": {
+      "value": 1,
+      "unit": "machines",
+      "notes": "Usually 1"
+    },
+    "numberOfHDDMachines": {
+      "value": 1,
+      "unit": "machines",
+      "notes": "Usually 1"
+    },
+    "cablesProvidedByClient": {
+      "value": "Yes",
+      "unit": "Yes/No",
+      "notes": "If No, add self-supply cost"
+    },
+    "ductsProvidedByClient": {
+      "value": "Yes",
+      "unit": "Yes/No",
+      "notes": "If No, add self-supply cost"
+    }
+  },
+  "mobilizationAndSiteSetup": {
+    "mobilisationPerSite": {
+      "value": 7000,
+      "unit": "BDT/site",
+      "frequency": "one-time",
+      "notes": "One-time transport/setup"
+    },
+    "waterReservoir1000L": {
+      "value": 20000,
+      "unit": "BDT",
+      "frequency": "one-time",
+      "notes": "HDD drilling fluid"
+    },
+    "siteWarehouse": {
+      "value": 10000,
+      "unit": "BDT/month",
+      "frequency": "monthly",
+      "notes": "Material storage"
+    },
+    "siteOffice": {
+      "value": 15000,
+      "unit": "BDT/month",
+      "frequency": "monthly"
+    },
+    "siteOfficeFurniture": {
+      "value": 30000,
+      "unit": "BDT",
+      "frequency": "one-time",
+      "notes": "One-time"
+    },
+    "labourShadeRent": {
+      "value": 15000,
+      "unit": "BDT/month",
+      "frequency": "monthly",
+      "notes": "Worker shelter/rest area"
+    }
+  },
+  "equipmentAndMachineryRental": {
+    "hddMachineRent": {
+      "value": 500000,
+      "unit": "BDT/month/machine",
+      "frequency": "monthly",
+      "notes": "High but realistic for equipped unit"
+    },
+    "generatorAndFuel": {
+      "value": 1000,
+      "unit": "BDT/day",
+      "frequency": "daily",
+      "notes": "Daily running"
+    },
+    "truckRent": {
+      "value": 5000,
+      "unit": "BDT/day",
+      "frequency": "daily",
+      "notes": "Daily transport"
+    },
+    "dieselOil": {
+      "value": 2000,
+      "unit": "BDT/day",
+      "frequency": "daily",
+      "notes": "For truck/generator"
+    },
+    "miniTruckForMaterialTransport": {
+      "value": 2500,
+      "unit": "BDT/day",
+      "frequency": "daily",
+      "notes": "Additional small truck"
+    },
+    "miniTruckFuelCost": {
+      "value": 1000,
+      "unit": "BDT/day",
+      "frequency": "daily",
+      "notes": "Daily fuel for mini truck"
+    }
+  },
+  "manpowerAndLabor": {
+    "labourDailyRate": {
+      "value": 1000,
+      "unit": "BDT/day/worker",
+      "frequency": "daily",
+      "notes": "Realistic unskilled/semi-skilled"
+    },
+    "numberOfLabourers": {
+      "value": 10,
+      "unit": "persons",
+      "notes": "Daily paid"
+    },
+    "trackerMan": {
+      "value": 40000,
+      "unit": "BDT/month",
+      "frequency": "monthly",
+      "notes": "HDD locator"
+    },
+    "operator": {
+      "value": 40000,
+      "unit": "BDT/month",
+      "frequency": "monthly",
+      "notes": "HDD operator"
+    },
+    "accountant": {
+      "value": 25000,
+      "unit": "BDT/month",
+      "frequency": "monthly",
+      "notes": "Project accounting"
+    },
+    "officeAssistant": {
+      "value": 15000,
+      "unit": "BDT/month",
+      "frequency": "monthly"
+    },
+    "consultantFees": {
+      "value": 30000,
+      "unit": "BDT/month",
+      "frequency": "monthly",
+      "notes": "Fixed monthly"
+    },
+    "consultantAllowances": {
+      "value": 6000,
+      "unit": "BDT/month",
+      "frequency": "monthly",
+      "notes": "3000 × 2 visits"
+    },
+    "daAllowances": {
+      "value": 500,
+      "unit": "BDT/month/employee",
+      "frequency": "monthly",
+      "notes": "Exclude daily labourers"
+    },
+    "mobileBill": {
+      "value": 1000,
+      "unit": "BDT/month/employee",
+      "frequency": "monthly",
+      "notes": "Exclude labourers"
+    },
+    "performanceBonus": {
+      "value": 20,
+      "unit": "% of monthly salary",
+      "frequency": "one-time",
+      "notes": "On monthly staff salaries"
+    }
+  },
+  "materialAndConsumable": {
+    "cableCostSingleMode": {
+      "value": 18,
+      "unit": "BDT/meter",
+      "notes": "Realistic: 10–25 Tk/m for 4-core SM; higher for armoured/multi-core",
+      "appliesIf": "self-supplied"
+    },
+    "hdpeDuctPLBCost": {
+      "value": 30,
+      "unit": "BDT/meter",
+      "notes": "Realistic: 25–50 Tk/m for 32/40mm PLB",
+      "appliesIf": "self-supplied"
+    },
+    "warningTape": {
+      "value": 5,
+      "unit": "BDT/meter",
+      "notes": "Mandatory along route"
+    },
+    "backfillMaterialExtra": {
+      "value": 500,
+      "unit": "BDT/sq meter",
+      "notes": "If needed (sand/gravel)"
+    },
+    "slipperCost": {
+      "value": 1.5,
+      "unit": "BDT/piece",
+      "notes": "Fiber management clips"
+    },
+    "numberOfSlippersRequired": {
+      "value": 2000,
+      "unit": "pieces/project",
+      "notes": "Fixed qty per project"
+    },
+    "tjBoxCost": {
+      "value": 110,
+      "unit": "BDT/piece",
+      "notes": "Small joint/termination box"
+    },
+    "tjBoxPerLink": {
+      "value": 4,
+      "unit": "pieces/link",
+      "notes": "Typical distribution"
+    },
+    "verticalWorkPVCFlexiblePipe": {
+      "value": 5,
+      "unit": "meters/link",
+      "notes": "Per vertical link"
+    },
+    "verticalWorkMetalFlexiblePipe": {
+      "value": 20,
+      "unit": "meters/link",
+      "notes": "Per vertical link"
+    },
+    "verticalWorkMetalClump": {
+      "value": 4,
+      "unit": "pieces/link",
+      "notes": "Per vertical link"
+    }
+  },
+  "civilAndInstallationWorks": {
+    "handHoleInstallation": {
+      "value": 15000,
+      "unit": "BDT/hand hole",
+      "notes": "Incl. labour/materials; realistic range"
+    },
+    "handHoleFreqClosurePit": {
+      "value": 200,
+      "unit": "meters",
+      "notes": "Every 200 m for splice access"
+    },
+    "handHoleFreqMainAccess": {
+      "value": 1000,
+      "unit": "meters",
+      "notes": "Every 1000 m access vault"
+    },
+    "openTrenchCost": {
+      "value": 160,
+      "unit": "BDT/meter",
+      "notes": "If HDD not possible"
+    },
+    "poleInstallation": {
+      "value": 16000,
+      "unit": "BDT/pole",
+      "notes": "If aerial transition"
+    },
+    "closurePrice": {
+      "value": 2000,
+      "unit": "BDT/unit",
+      "notes": "Splice closure (dome)"
+    },
+    "odfCost": {
+      "value": 7000,
+      "unit": "BDT/unit",
+      "notes": "Optical Distribution Frame"
+    },
+    "verticalWorkContractorRate": {
+      "value": 2700,
+      "unit": "BDT/link",
+      "notes": "Subcontracted installation"
+    },
+    "splicingSubcontractorRate": {
+      "value": 50,
+      "unit": "BDT/core",
+      "notes": "Per core connection"
+    }
+  },
+  "designDocumentationAndPermissions": {
+    "designCost": {
+      "value": 1,
+      "unit": "BDT/meter",
+      "notes": "Survey + drawings"
+    },
+    "documentsPreparation": {
+      "value": 0.5,
+      "unit": "BDT/meter",
+      "notes": "Paperwork/permissions"
+    }
+  },
+  "overheadAndAdministrative": {
+    "transportationFixed": {
+      "value": 30000,
+      "unit": "BDT",
+      "frequency": "project total",
+      "notes": "Beyond daily trucks"
+    },
+    "projectAuthorityPermissionCost": {
+      "value": 40,
+      "unit": "BDT/meter"
+    },
+    "officeEntertainment": {
+      "value": 50000,
+      "unit": "BDT",
+      "notes": "Adjust if needed"
+    },
+    "headOfficeOverhead": {
+      "value": 25000,
+      "unit": "BDT/month",
+      "frequency": "monthly",
+      "notes": "Allocation"
+    },
+    "officeStationery": {
+      "value": 5000,
+      "unit": "BDT/month",
+      "frequency": "monthly",
+      "notes": "Monthly"
+    },
+    "projectOfficeEquipmentRepair": {
+      "value": 3000,
+      "unit": "BDT/month",
+      "frequency": "monthly",
+      "notes": "Maintenance"
+    },
+    "miscellaneous": {
+      "value": 20000,
+      "unit": "BDT/month",
+      "frequency": "monthly",
+      "notes": "Contingency"
+    },
+    "extraCostForVerticalSplicingWork": {
+      "value": 5000,
+      "unit": "BDT/project",
+      "frequency": "project total",
+      "notes": "Fixed extra"
+    }
+  },
+  "testingSafetyAndMandatory": {
+    "ppeAndSafetyGear": {
+      "value": 50000,
+      "unit": "BDT",
+      "frequency": "one-time/project",
+      "notes": "Covers all staff + labourers"
+    },
+    "otdrTestingAndCommissioning": {
+      "value": 20000,
+      "unit": "BDT",
+      "frequency": "project total",
+      "notes": "Final testing"
+    },
+    "projectInsurance": {
+      "value": 1,
+      "unit": "% of total costs",
+      "notes": "Conservative estimate"
+    }
+  },
+  "financingCosts": {
+    "bankLoanInterestRate": {
+      "value": 14,
+      "unit": "% per year",
+      "notes": "Realistic for construction/SME term loans in BD 2026 (13–15% typical; adjust to your offer)"
+    },
+    "borrowedAmount": {
+      "value": 2000000,
+      "unit": "BDT",
+      "notes": "Enter your loan principal"
+    }
+  },
+  "revenueAndTax": {
+    "mainUndergroundLaying": {
+      "value": 250,
+      "unit": "BDT/meter",
+      "notes": "Client billing rate (incl. VAT & tax)"
+    },
+    "verticalLinkWork": {
+      "value": 180,
+      "unit": "BDT/meter",
+      "notes": "Or use contractor + materials (incl. VAT & tax)"
+    },
+    "splicingRevenue": {
+      "value": 70,
+      "unit": "BDT/core",
+      "notes": "Extra revenue if applicable (incl. VAT & tax)"
+    },
+    "vatRate": {
+      "value": 10,
+      "unit": "% of gross revenue",
+      "notes": "Standard BD VAT"
+    },
+    "incomeTaxRate": {
+      "value": 5,
+      "unit": "% of gross revenue",
+      "notes": "Adjust per your status"
+    }
+  }
+}
