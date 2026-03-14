@@ -14,9 +14,9 @@ export function MainLayout({ children }: MainLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="relative h-screen flex overflow-hidden bg-background">
+    <div className="app-shell relative h-screen flex overflow-hidden">
       {/* Sidebar - Desktop */}
-      <aside className="hidden md:flex md:w-64 md:flex-col">
+      <aside className="hidden md:flex md:w-72 md:flex-col">
         <Sidebar />
       </aside>
 
@@ -29,7 +29,7 @@ export function MainLayout({ children }: MainLayoutProps) {
             onClick={() => setSidebarOpen(false)}
           />
           {/* Sidebar */}
-          <aside className="fixed inset-y-0 left-0 z-50 w-64 md:hidden">
+          <aside className="fixed inset-y-0 left-0 z-50 w-72 md:hidden">
             <Sidebar />
           </aside>
         </>
@@ -41,7 +41,7 @@ export function MainLayout({ children }: MainLayoutProps) {
         
         {/* Scrollable Content */}
         <main className="flex-1 overflow-y-auto">
-          <div className="container mx-auto p-6">
+          <div className="content-wrap">
             {children}
           </div>
         </main>
