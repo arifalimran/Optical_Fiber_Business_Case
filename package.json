@@ -4,7 +4,8 @@
   "description": "Business case and feasibility analysis application for optical fiber projects",
   "scripts": {
     "install-all": "npm install && cd backend && npm install && cd ../frontend && npm install",
-    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "dev": "npm run client",
+    "dev:full": "concurrently \"npm run server\" \"npm run client\"",
     "server": "cd backend && npm run dev",
     "client": "cd frontend && npm run dev",
     "build": "cd frontend && npm run build"

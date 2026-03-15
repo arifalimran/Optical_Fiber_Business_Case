@@ -47,7 +47,7 @@ export function TopBar({ onMenuClick }: TopBarProps) {
   };
 
   return (
-    <header className="topbar-surface sticky top-0 z-50 flex h-16 items-center gap-4 px-6">
+    <header className="topbar-surface sticky top-0 z-50 flex h-14 items-center gap-3 px-4">
       {/* Mobile Menu Button */}
       <Button
         variant="ghost"

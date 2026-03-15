@@ -9,9 +9,9 @@ export function Footer() {
 
   return (
     <footer className="border-t bg-gradient-to-r from-background via-muted/10 to-background backdrop-blur-sm">
-      <div className="container mx-auto px-6 py-4">
+      <div className="container mx-auto px-4 py-2.5">
         {/* Compact Single Row */}
-        <div className="flex flex-col items-center justify-between gap-3 text-sm text-muted-foreground md:flex-row">
+        <div className="flex flex-col items-center justify-between gap-2 text-sm text-muted-foreground md:flex-row">
           {/* Left: Copyright and User Info */}
           <div className="flex flex-col items-center gap-2 md:flex-row md:gap-4">
             <p className="flex items-center gap-2">

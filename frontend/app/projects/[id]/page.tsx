@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
+import { getWorkflowState, getStepProgressPercent, areAllStepsCompleted } from '@/lib/workflow/feasibilitySteps';
 
 interface Project {
   id: string;
@@ -55,17 +56,22 @@ interface Template {
   description: string;
 }
 
+const projectCache = new Map<string, Project>();
+const templateCache = new Map<string, Template>();
+
 const STATUS_COLORS = {
   DRAFT: { bg: 'bg-gray-100 dark:bg-gray-800', text: 'text-gray-700 dark:text-gray-300', label: 'Draft' },
-  IN_PROGRESS: { bg: 'bg-blue-100 dark:bg-blue-900', text: 'text-blue-700 dark:text-blue-300', label: 'In Progress' },
+  ANALYZING: { bg: 'bg-blue-100 dark:bg-blue-900', text: 'text-blue-700 dark:text-blue-300', label: 'Analyzing' },
+  PENDING_APPROVAL: { bg: 'bg-amber-100 dark:bg-amber-900', text: 'text-amber-700 dark:text-amber-300', label: 'Pending Approval' },
   COMPLETED: { bg: 'bg-green-100 dark:bg-green-900', text: 'text-green-700 dark:text-green-300', label: 'Completed' },
   APPROVED: { bg: 'bg-emerald-100 dark:bg-emerald-900', text: 'text-emerald-700 dark:text-emerald-300', label: 'Approved' },
   REJECTED: { bg: 'bg-red-100 dark:bg-red-900', text: 'text-red-700 dark:text-red-300', label: 'Rejected' }
 };
 
 const TEMPLATE_ICONS: Record<string, React.ComponentType<any>> = {
-  'optical-fiber': Cable,
-  '5g-tower': Radio,
+  'OPTICAL_FIBER': Cable,
+  '5G_TOWER': Radio,
+  '5G_TOWER_CONVERSION': Radio,
   default: Building2
 };
 
@@ -78,21 +84,53 @@ export default function ProjectPage() {
   const [loading, setLoading] = useState(true);
   const [editingName, setEditingName] = useState(false);
   const [tempName, setTempName] = useState('');
+  const [calculating, setCalculating] = useState(false);
+  const [approving, setApproving] = useState(false);
+  const [rejecting, setRejecting] = useState(false);
 
   const projectId = params.id as string;
 
   useEffect(() => {
     if (projectId) {
-      fetchProject();
+      const cachedProject = projectCache.get(projectId);
+      if (cachedProject) {
+        setProject(cachedProject);
+        setTempName(cachedProject.projectName);
+        setLoading(false);
+
+        const cachedTemplate = templateCache.get(cachedProject.templateCode);
+        if (cachedTemplate) {
+          setTemplate(cachedTemplate);
+        }
+
+        void fetchProject(true);
+      } else {
+        void fetchProject(false);
+      }
     }
   }, [projectId]);
 
-  const fetchProject = async () => {
+  const fetchTemplate = async (templateCode: string) => {
+    try {
+      const templateResponse = await fetch(`/api/templates/${templateCode}`);
+      if (templateResponse.ok) {
+        const templateData = await templateResponse.json();
+        setTemplate(templateData);
+        templateCache.set(templateCode, templateData);
+      }
+    } catch (error) {
+      console.error('Error fetching template:', error);
+    }
+  };
+
+  const fetchProject = async (silent: boolean) => {
     try {
       const response = await fetch(`/api/projects/${projectId}`);
       if (!response.ok) {
         if (response.status === 404) {
-          toast.error('Project not found');
+          if (!silent) {
+            toast.error('Project not found');
+          }
           router.push('/projects');
           return;
         }
@@ -101,18 +139,16 @@ export default function ProjectPage() {
       
       const projectData = await response.json();
       setProject(projectData);
+      projectCache.set(projectData.id, projectData);
       setTempName(projectData.projectName);
-      
-      // Fetch template info
-      const templateResponse = await fetch(`/api/templates/${projectData.templateCode}`);
-      if (templateResponse.ok) {
-        const templateData = await templateResponse.json();
-        setTemplate(templateData);
-      }
+
+      setLoading(false);
+      void fetchTemplate(projectData.templateCode);
     } catch (error) {
       console.error('Error fetching project:', error);
-      toast.error('Failed to load project');
-    } finally {
+      if (!silent) {
+        toast.error('Failed to load project');
+      }
       setLoading(false);
     }
   };
@@ -140,6 +176,97 @@ export default function ProjectPage() {
     } catch (error) {
       console.error('Error updating project:', error);
       toast.error('Failed to update project name');
+    }
+  };
+
+  const handleCalculate = async () => {
+    if (!project) {
+      return;
+    }
+
+    const workflowState = getWorkflowState(project.inputParameters ?? {});
+    if (!areAllStepsCompleted(workflowState)) {
+      toast.error('Complete Steps 1-4 before running decision calculation');
+      return;
+    }
+
+    setCalculating(true);
+    try {
+      const response = await fetch(`/api/projects/${projectId}/calculate`, {
+        method: 'POST'
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Failed to calculate project' }));
+        throw new Error(errorData.error || 'Failed to calculate project');
+      }
+
+      const updatedProject = await response.json();
+      setProject(updatedProject);
+      projectCache.set(updatedProject.id, updatedProject);
+      toast.success('Calculation completed');
+    } catch (error) {
+      console.error('Error calculating project:', error);
+      toast.error('Failed to calculate project');
+    } finally {
+      setCalculating(false);
+    }
+  };
+
+  const handleApprove = async () => {
+    setApproving(true);
+    try {
+      const response = await fetch(`/api/projects/${projectId}/approve`, {
+        method: 'POST'
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Failed to approve project' }));
+        throw new Error(errorData.error || 'Failed to approve project');
+      }
+
+      const updatedProject = await response.json();
+      setProject(updatedProject);
+      projectCache.set(updatedProject.id, updatedProject);
+      toast.success('Project approved');
+    } catch (error) {
+      console.error('Error approving project:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to approve project');
+    } finally {
+      setApproving(false);
+    }
+  };
+
+  const handleReject = async () => {
+    const reason = window.prompt('Enter rejection reason');
+    if (!reason?.trim()) {
+      return;
+    }
+
+    setRejecting(true);
+    try {
+      const response = await fetch(`/api/projects/${projectId}/reject`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ reason: reason.trim() })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Failed to reject project' }));
+        throw new Error(errorData.error || 'Failed to reject project');
+      }
+
+      const updatedProject = await response.json();
+      setProject(updatedProject);
+      projectCache.set(updatedProject.id, updatedProject);
+      toast.success('Project rejected');
+    } catch (error) {
+      console.error('Error rejecting project:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to reject project');
+    } finally {
+      setRejecting(false);
     }
   };
 
@@ -171,14 +298,10 @@ export default function ProjectPage() {
   if (loading) {
     return (
       <div className="container mx-auto p-6">
-        <div className="animate-pulse space-y-6">
-          <div className="h-8 bg-gray-200 rounded w-64"></div>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 space-y-4">
-              <div className="h-32 bg-gray-200 rounded-xl"></div>
-              <div className="h-64 bg-gray-200 rounded-xl"></div>
-            </div>
-            <div className="h-96 bg-gray-200 rounded-xl"></div>
+        <div className="flex items-center justify-center min-h-[40vh]">
+          <div className="flex items-center gap-3 text-muted-foreground">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            <span>Loading project...</span>
           </div>
         </div>
       </div>
@@ -203,6 +326,12 @@ export default function ProjectPage() {
 
   const statusConfig = STATUS_COLORS[project.status as keyof typeof STATUS_COLORS] || STATUS_COLORS.DRAFT;
   const IconComponent = getTemplateIcon(project.templateCode);
+  const workflowState = getWorkflowState(project.inputParameters ?? {});
+  const workflowProgress = getStepProgressPercent(workflowState);
+  const allStepsDone = areAllStepsCompleted(workflowState);
+  const calculationScenarios = (
+    project.calculatedRevenue as { scenarios?: Array<{ name: string; netProfit: number; profitMargin: number }> } | null
+  )?.scenarios ?? [];
 
   return (
     <div className="container mx-auto p-6 max-w-7xl">
@@ -324,20 +453,20 @@ export default function ProjectPage() {
                   </Button>
                 </Link>
                 
-                <Link href={`/projects/${project.id}/calculate`}>
-                  <Button variant="outline" className="w-full h-20 flex-col gap-2">
+                <Button variant="outline" className="w-full h-20 flex-col gap-2" onClick={handleCalculate} disabled={calculating || !allStepsDone}>
                     <Calculator className="h-6 w-6" />
-                    <span>Calculate</span>
+                    <span>{calculating ? 'Calculating...' : 'Calculate'}</span>
                   </Button>
-                </Link>
                 
-                <Link href={`/projects/${project.id}/report`}>
-                  <Button variant="outline" className="w-full h-20 flex-col gap-2">
+                <Button variant="outline" className="w-full h-20 flex-col gap-2" onClick={() => router.push(`/projects/${project.id}`)}>
                     <FileText className="h-6 w-6" />
-                    <span>Report</span>
+                    <span>Summary</span>
                   </Button>
-                </Link>
+                
               </div>
+              <p className="text-xs text-muted-foreground mt-3">
+                Workflow progress: {workflowProgress}% complete {allStepsDone ? '(ready for calculation)' : '(finish Steps 1-4 to unlock calculation)'}
+              </p>
             </CardContent>
           </Card>
 
@@ -410,12 +539,36 @@ export default function ProjectPage() {
               </div>
               
               {project.status === 'DRAFT' && (
-                <Link href={`/projects/${project.id}/calculate`}>
-                  <Button className="w-full">
+                  <Button className="w-full" onClick={handleCalculate} disabled={calculating || !allStepsDone}>
                     <Calculator className="h-4 w-4 mr-2" />
-                    Calculate Financials
+                    {calculating ? 'Calculating...' : 'Calculate Financials'}
                   </Button>
-                </Link>
+              )}
+
+              {project.calculatedRevenue && (
+                <div className="rounded-lg border border-border p-3 mt-2">
+                  <p className="text-xs text-muted-foreground mb-1">Decision</p>
+                  <p className="font-medium">
+                    {(project.calculatedRevenue as { decision?: { label?: string; message?: string } }).decision?.label || 'N/A'}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {(project.calculatedRevenue as { decision?: { message?: string } }).decision?.message || 'Run calculation to generate decision guidance.'}
+                  </p>
+                </div>
+              )}
+
+              {calculationScenarios.length > 0 && (
+                <div className="rounded-lg border border-border p-3 space-y-2">
+                  <p className="text-xs text-muted-foreground">Scenario Summary</p>
+                  {calculationScenarios.map((scenario) => (
+                    <div key={scenario.name} className="flex items-center justify-between text-sm">
+                      <span>{scenario.name}</span>
+                      <span className={scenario.netProfit >= 0 ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}>
+                        {formatCurrency(scenario.netProfit)} ({scenario.profitMargin.toFixed(1)}%)
+                      </span>
+                    </div>
+                  ))}
+                </div>
               )}
             </CardContent>
           </Card>
@@ -455,6 +608,18 @@ export default function ProjectPage() {
               <CardTitle>Actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
+              <Button variant="outline" className="w-full justify-start" onClick={handleCalculate} disabled={calculating || !allStepsDone}>
+                <Calculator className="h-4 w-4 mr-2" />
+                {calculating ? 'Calculating...' : 'Recalculate'}
+              </Button>
+              <Button variant="outline" className="w-full justify-start" onClick={handleApprove} disabled={approving || project.status === 'APPROVED'}>
+                <BarChart3 className="h-4 w-4 mr-2" />
+                {approving ? 'Approving...' : project.status === 'APPROVED' ? 'Approved' : 'Approve Project'}
+              </Button>
+              <Button variant="outline" className="w-full justify-start" onClick={handleReject} disabled={rejecting}>
+                <FileText className="h-4 w-4 mr-2" />
+                {rejecting ? 'Rejecting...' : 'Reject with Reason'}
+              </Button>
               <Button variant="outline" className="w-full justify-start">
                 <FileText className="h-4 w-4 mr-2" />
                 Export Report

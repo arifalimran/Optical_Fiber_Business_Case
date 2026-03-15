@@ -17,6 +17,8 @@ export interface FormData {
   clientName: string;
   location: string;
   description: string;
+  clientContactPhone: string;
+  clientContactEmail: string;
   selectedTemplate: string;
 }
 
@@ -59,6 +61,18 @@ export const useFormValidation = (formData: Partial<FormData>) => {
       case 'description':
         if (value && value.length > 500) {
           fieldError = 'Description must be less than 500 characters';
+        }
+        break;
+
+      case 'clientContactPhone':
+        if (value && !/^\+?[0-9\s\-()]{7,20}$/.test(value)) {
+          fieldError = 'Enter a valid contact phone number';
+        }
+        break;
+
+      case 'clientContactEmail':
+        if (value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+          fieldError = 'Enter a valid contact email address';
         }
         break;
       
@@ -126,6 +140,9 @@ export const validateProjectForm = (data: {
   projectName: string;
   clientName: string;
   location: string;
+  description?: string;
+  clientContactPhone?: string;
+  clientContactEmail?: string;
   selectedTemplate: string;
 }): ValidationResult => {
   const errors: ValidationError[] = [];
@@ -156,6 +173,18 @@ export const validateProjectForm = (data: {
   // Template selection validation
   if (!data.selectedTemplate) {
     errors.push({ field: 'selectedTemplate', message: 'Please select a project template' });
+  }
+
+  if (data.description && data.description.length > 500) {
+    errors.push({ field: 'description', message: 'Description must be less than 500 characters' });
+  }
+
+  if (data.clientContactPhone && !/^\+?[0-9\s\-()]{7,20}$/.test(data.clientContactPhone)) {
+    errors.push({ field: 'clientContactPhone', message: 'Enter a valid contact phone number' });
+  }
+
+  if (data.clientContactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.clientContactEmail)) {
+    errors.push({ field: 'clientContactEmail', message: 'Enter a valid contact email address' });
   }
 
   return {

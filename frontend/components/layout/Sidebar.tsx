@@ -1,11 +1,14 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { getWorkflowState, isStepAccessible, type FeasibilityStep, type FeasibilityWorkflowState } from "@/lib/workflow/feasibilitySteps";
 import {
   LayoutDashboard,
   FileText,
@@ -68,16 +71,19 @@ const getProjectMenuItems = (projectId: string) => [
     title: "Assumptions",
     icon: Sliders,
     href: `/projects/${projectId}/assumptions`,
+    step: 'assumptions' as FeasibilityStep,
   },
   {
     title: "CapEx",
     icon: Building2,
     href: `/projects/${projectId}/capex`,
+    step: 'capex' as FeasibilityStep,
   },
   {
     title: "OpEx",
     icon: DollarSign,
     href: `/projects/${projectId}/opex`,
+    step: 'opex' as FeasibilityStep,
   },
   {
     title: "Revenue",
@@ -88,6 +94,7 @@ const getProjectMenuItems = (projectId: string) => [
     title: "Cashflow",
     icon: Waves,
     href: `/projects/${projectId}/cashflow`,
+    step: 'cashflow' as FeasibilityStep,
   },
   {
     title: "Report",
@@ -99,18 +106,62 @@ const getProjectMenuItems = (projectId: string) => [
 export function Sidebar() {
   const pathname = usePathname();
   const params = useParams();
+  const [workflowState, setWorkflowState] = useState<FeasibilityWorkflowState | null>(null);
   
   // Check if we're inside a project
   const projectId = params?.id as string;
   const isInProject = pathname.startsWith('/projects/') && projectId && !pathname.endsWith('/new');
+
+  useEffect(() => {
+    if (!isInProject || !projectId) {
+      setWorkflowState(null);
+      return;
+    }
+
+    let isActive = true;
+
+    const loadWorkflowState = async () => {
+      try {
+        const response = await fetch(`/api/projects/${projectId}`);
+        if (!response.ok) {
+          return;
+        }
+
+        const project = await response.json();
+        if (isActive) {
+          setWorkflowState(getWorkflowState(project.inputParameters ?? {}));
+        }
+      } catch {
+        if (isActive) {
+          setWorkflowState(null);
+        }
+      }
+    };
+
+    void loadWorkflowState();
+
+    return () => {
+      isActive = false;
+    };
+  }, [isInProject, projectId, pathname]);
   
   // Choose menu items based on context
   const menuItems = isInProject ? getProjectMenuItems(projectId) : generalMenuItems;
 
+  const completedSteps = useMemo(() => {
+    if (!workflowState) {
+      return new Set<FeasibilityStep>();
+    }
+
+    return new Set<FeasibilityStep>(
+      (['assumptions', 'capex', 'opex', 'cashflow'] as FeasibilityStep[]).filter((step) => workflowState[step])
+    );
+  }, [workflowState]);
+
   return (
     <div className="sidebar-surface flex h-full flex-col">
       {/* Logo Section */}
-      <div className="flex h-16 items-center border-b px-6">
+      <div className="flex h-14 items-center border-b px-4">
         <Link href="/" className="flex items-center gap-3 font-semibold group">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-md">
             <span className="text-lg font-bold">OF</span>
@@ -123,7 +174,7 @@ export function Sidebar() {
       </div>
 
       {/* Navigation Section */}
-      <ScrollArea className="flex-1 px-3 py-4">
+      <ScrollArea className="flex-1 px-2.5 py-3">
         {/* Project context header */}
         {isInProject && (
           <div className="mb-4">
@@ -143,18 +194,27 @@ export function Sidebar() {
           {menuItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
-            const isProjectRoute = isInProject && item.href.includes('/projects/');
+            const isStepItem = 'step' in item && !!item.step;
+            const accessible = !isStepItem || !workflowState || isStepAccessible(item.step, workflowState);
+            const stepDone = isStepItem && item.step ? completedSteps.has(item.step) : false;
 
             return (
               <Link
                 key={item.href}
-                href={item.href}
+                href={accessible ? item.href : '#'}
+                onClick={(event) => {
+                  if (!accessible) {
+                    event.preventDefault();
+                  }
+                }}
                 className={cn(
-                  "nav-link group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium relative overflow-hidden",
+                  "nav-link group flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium relative overflow-hidden",
                   isActive
                     ? "nav-link-active"
-                    : "text-foreground/85 hover:text-foreground"
+                    : "text-foreground/85 hover:text-foreground",
+                  !accessible && "opacity-55 cursor-not-allowed"
                 )}
+                aria-disabled={!accessible}
               >
                 {isActive && (
                   <div className="absolute left-0 top-1 bottom-1 w-1 bg-primary/80 rounded-r-full" />
@@ -164,6 +224,11 @@ export function Sidebar() {
                   isActive ? "text-primary" : "text-foreground/70"
                 )} />
                 <span>{item.title}</span>
+                {isStepItem && (
+                  <Badge variant={stepDone ? 'default' : accessible ? 'secondary' : 'outline'} className="ml-auto text-[10px] h-5 px-1.5">
+                    {stepDone ? 'Done' : accessible ? 'Run' : 'Lock'}
+                  </Badge>
+                )}
               </Link>
             );
           })}
@@ -171,7 +236,7 @@ export function Sidebar() {
         
         {/* Add separator and quick actions for general navigation */}
         {!isInProject && (
-          <div className="mt-6 pt-4 border-t border-border/70">
+          <div className="mt-4 pt-3 border-t border-border/70">
             <div className="space-y-1">
               <Link href="/projects/new">
                 <Button variant="outline" className="w-full justify-start gap-2 text-sm ui-input">
@@ -185,7 +250,7 @@ export function Sidebar() {
       </ScrollArea>
 
       {/* Bottom Section */}
-      <div className="border-t p-4">
+      <div className="border-t p-3">
         <div className="surface-card p-3 text-sm">
           <div className="flex items-center justify-between mb-1">
             <p className="font-semibold text-foreground">Business Case</p>

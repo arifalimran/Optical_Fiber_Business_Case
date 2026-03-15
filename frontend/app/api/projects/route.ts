@@ -1,6 +1,46 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
+type TemplateField = {
+  name?: string;
+  type?: string;
+  default?: unknown;
+};
+
+const buildDefaultInputParameters = (inputSchema: unknown): Record<string, unknown> => {
+  if (
+    !inputSchema ||
+    typeof inputSchema !== 'object' ||
+    !('fields' in inputSchema) ||
+    !Array.isArray((inputSchema as { fields?: unknown }).fields)
+  ) {
+    return {};
+  }
+
+  const fields = (inputSchema as { fields: TemplateField[] }).fields;
+
+  return fields.reduce<Record<string, unknown>>((acc, field) => {
+    if (!field?.name) {
+      return acc;
+    }
+
+    if (field.default !== undefined) {
+      acc[field.name] = field.default;
+      return acc;
+    }
+
+    if (field.type === 'boolean') {
+      acc[field.name] = false;
+    } else if (field.type === 'number') {
+      acc[field.name] = 0;
+    } else {
+      acc[field.name] = '';
+    }
+
+    return acc;
+  }, {});
+};
+
 export async function GET(request: NextRequest) {
   try {
     const userId = request.headers.get('x-user-id');
@@ -56,7 +96,17 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { templateCode, projectName, clientName, location, description } = body;
+    const {
+      templateCode,
+      projectName,
+      clientName,
+      location,
+      description,
+      clientCompanyAddress,
+      clientContactPerson,
+      clientContactPhone,
+      clientContactEmail,
+    } = body;
 
     // Validate required fields
     if (!templateCode || !projectName?.trim()) {
@@ -81,30 +131,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get default parameters for the template
-    const templateParameters = await prisma.templateCostParameter.findMany({
-      where: {
-        templateCode: templateCode,
-        isActive: true
-      },
-      select: {
-        itemName: true,
-        category: true,
-        rate: true,
-        unit: true
-      }
-    });
-
-    // Create initial input parameters object with defaults
-    const inputParameters: Record<string, any> = {};
-    templateParameters.forEach(param => {
-      inputParameters[param.itemName] = {
-        value: 0, // Default to 0
-        rate: param.rate,
-        unit: param.unit,
-        category: param.category
-      };
-    });
+    const inputParameters = {
+      ...buildDefaultInputParameters(template.inputSchema),
+      client_company_address: clientCompanyAddress?.trim() || '',
+      client_contact_person: clientContactPerson?.trim() || '',
+      client_contact_phone: clientContactPhone?.trim() || '',
+      client_contact_email: clientContactEmail?.trim() || '',
+    };
 
     // Create the project
     const project = await prisma.project.create({

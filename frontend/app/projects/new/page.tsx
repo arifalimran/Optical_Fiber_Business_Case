@@ -61,6 +61,10 @@ export default function NewProjectPage() {
   const [clientName, setClientName] = useState('');
   const [location, setLocation] = useState('');
   const [description, setDescription] = useState('');
+  const [clientCompanyAddress, setClientCompanyAddress] = useState('');
+  const [clientContactPerson, setClientContactPerson] = useState('');
+  const [clientContactPhone, setClientContactPhone] = useState('');
+  const [clientContactEmail, setClientContactEmail] = useState('');
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [showValidation, setShowValidation] = useState(false);
@@ -77,6 +81,8 @@ export default function NewProjectPage() {
     clientName,
     location,
     description,
+    clientContactPhone,
+    clientContactEmail,
     selectedTemplate
   });
 
@@ -108,6 +114,10 @@ export default function NewProjectPage() {
       clientName: clientName.trim(),
       location: location.trim(),
       description: description.trim(),
+      clientCompanyAddress: clientCompanyAddress.trim(),
+      clientContactPerson: clientContactPerson.trim(),
+      clientContactPhone: clientContactPhone.trim(),
+      clientContactEmail: clientContactEmail.trim(),
       selectedTemplate
     };
     
@@ -128,7 +138,11 @@ export default function NewProjectPage() {
           projectName: formData.projectName,
           clientName: formData.clientName || null,
           location: formData.location || null,
-          description: formData.description || null
+          description: formData.description || null,
+          clientCompanyAddress: formData.clientCompanyAddress || null,
+          clientContactPerson: formData.clientContactPerson || null,
+          clientContactPhone: formData.clientContactPhone || null,
+          clientContactEmail: formData.clientContactEmail || null
         })
       });
 
@@ -484,6 +498,82 @@ export default function NewProjectPage() {
                   {getFieldError('description')}
                 </div>
               )}
+            </div>
+
+            <div className="pt-2 border-t border-border/50">
+              <h3 className="text-base font-semibold">Client Contact Details</h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                Capture these now so executives can review and edit them later in Assumptions.
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <Label htmlFor="clientCompanyAddress" className="text-base font-medium">Client Company Address</Label>
+              <InputEnhanced
+                id="clientCompanyAddress"
+                placeholder="e.g., House 25, Road 12, Banani, Dhaka"
+                value={clientCompanyAddress}
+                onChange={(e) => setClientCompanyAddress(e.target.value)}
+                hint="Optional: Registered or operating address"
+                className="h-12"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-3">
+                <Label htmlFor="clientContactPerson" className="text-base font-medium">Contact Person</Label>
+                <InputEnhanced
+                  id="clientContactPerson"
+                  placeholder="e.g., Md. Rahman"
+                  value={clientContactPerson}
+                  onChange={(e) => setClientContactPerson(e.target.value)}
+                  hint="Optional: Primary point of contact"
+                  className="h-12"
+                />
+              </div>
+
+              <div className="space-y-3">
+                <Label htmlFor="clientContactPhone" className="text-base font-medium">
+                  Contact Phone Number
+                  {hasFieldError('clientContactPhone') && showValidation && (
+                    <AlertTriangle className="h-4 w-4 text-destructive inline-block ml-2" />
+                  )}
+                </Label>
+                <InputEnhanced
+                  id="clientContactPhone"
+                  placeholder="e.g., +8801XXXXXXXXX"
+                  value={clientContactPhone}
+                  onChange={(e) => {
+                    setClientContactPhone(e.target.value);
+                    if (showValidation) validateField('clientContactPhone', e.target.value.trim());
+                  }}
+                  error={hasFieldError('clientContactPhone') && showValidation ? getFieldError('clientContactPhone') : ''}
+                  hint="Optional: Include country code when possible"
+                  className="h-12"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <Label htmlFor="clientContactEmail" className="text-base font-medium">
+                Contact Email Address
+                {hasFieldError('clientContactEmail') && showValidation && (
+                  <AlertTriangle className="h-4 w-4 text-destructive inline-block ml-2" />
+                )}
+              </Label>
+              <InputEnhanced
+                id="clientContactEmail"
+                type="email"
+                placeholder="e.g., contact@client-company.com"
+                value={clientContactEmail}
+                onChange={(e) => {
+                  setClientContactEmail(e.target.value);
+                  if (showValidation) validateField('clientContactEmail', e.target.value.trim());
+                }}
+                error={hasFieldError('clientContactEmail') && showValidation ? getFieldError('clientContactEmail') : ''}
+                hint="Optional: Used for project communication"
+                className="h-12"
+              />
             </div>
           </CardContent>
         </Card>

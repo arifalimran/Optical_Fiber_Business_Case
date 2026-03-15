@@ -33,9 +33,11 @@ import {
   Eye,
   Edit,
   Trash2,
-  X
+  X,
+  Loader2
 } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 interface Project {
   id: string;
@@ -58,6 +60,9 @@ interface Template {
   name: string;
   description: string;
 }
+
+let projectsCache: Project[] | null = null;
+let templatesCache: Template[] | null = null;
 
 const STATUS_COLORS = {
   DRAFT: { 
@@ -125,18 +130,25 @@ const TEMPLATE_COLORS = {
 
 export default function ProjectsPage() {
   const { user } = useAuth();
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [templates, setTemplates] = useState<Template[]>([]);
-  const [loading, setLoading] = useState(true);
+  const router = useRouter();
+  const [projects, setProjects] = useState<Project[]>(projectsCache ?? []);
+  const [templates, setTemplates] = useState<Template[]>(templatesCache ?? []);
+  const [loading, setLoading] = useState(!projectsCache);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [sortBy, setSortBy] = useState<'name' | 'date' | 'status' | 'profit'>('date');
 
   useEffect(() => {
-    fetchProjects();
-    fetchTemplates();
+    void fetchProjects();
+    void fetchTemplates();
   }, []);
+
+  useEffect(() => {
+    projects.slice(0, 10).forEach((project) => {
+      router.prefetch(`/projects/${project.id}`);
+    });
+  }, [projects, router]);
 
   const fetchProjects = async () => {
     try {
@@ -144,6 +156,7 @@ export default function ProjectsPage() {
       if (!response.ok) throw new Error('Failed to fetch projects');
       const data = await response.json();
       setProjects(data);
+      projectsCache = data;
     } catch (error) {
       console.error('Error fetching projects:', error);
       toast.error('Failed to load projects');
@@ -158,6 +171,7 @@ export default function ProjectsPage() {
       if (!response.ok) throw new Error('Failed to fetch templates');
       const data = await response.json();
       setTemplates(data);
+      templatesCache = data;
     } catch (error) {
       console.error('Error fetching templates:', error);
     }
@@ -204,44 +218,10 @@ export default function ProjectsPage() {
   if (loading) {
     return (
       <div className="container mx-auto p-6">
-        <div className="space-y-8">
-          {/* Header Skeleton */}
-          <div className="space-y-4">
-            <div className="h-8 bg-gradient-to-r from-muted to-muted/60 rounded-lg w-48 animate-pulse"></div>
-            <div className="h-4 bg-gradient-to-r from-muted to-muted/60 rounded-lg w-96 animate-pulse"></div>
-          </div>
-          
-          {/* Stats Skeleton */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="glass-card p-6 space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="h-4 bg-gradient-to-r from-muted to-muted/60 rounded w-20 animate-pulse"></div>
-                  <div className="h-8 w-8 bg-gradient-to-r from-muted to-muted/60 rounded-lg animate-pulse"></div>
-                </div>
-                <div className="h-8 bg-gradient-to-r from-muted to-muted/60 rounded w-24 animate-pulse"></div>
-              </div>
-            ))}
-          </div>
-          
-          {/* Projects Grid Skeleton */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3, 4, 5, 6].map(i => (
-              <div key={i} className="glass-card p-6 space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="h-6 bg-gradient-to-r from-muted to-muted/60 rounded w-32 animate-pulse"></div>
-                  <div className="h-6 w-20 bg-gradient-to-r from-muted to-muted/60 rounded-full animate-pulse"></div>
-                </div>
-                <div className="space-y-2">
-                  <div className="h-4 bg-gradient-to-r from-muted to-muted/60 rounded animate-pulse"></div>
-                  <div className="h-4 bg-gradient-to-r from-muted to-muted/60 rounded w-3/4 animate-pulse"></div>
-                </div>
-                <div className="flex justify-between items-center pt-4 border-t border-border/50">
-                  <div className="h-4 bg-gradient-to-r from-muted to-muted/60 rounded w-16 animate-pulse"></div>
-                  <div className="h-4 bg-gradient-to-r from-muted to-muted/60 rounded w-20 animate-pulse"></div>
-                </div>
-              </div>
-            ))}
+        <div className="flex items-center justify-center min-h-[40vh]">
+          <div className="flex items-center gap-3 text-muted-foreground">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            <span>Loading projects...</span>
           </div>
         </div>
       </div>
@@ -504,6 +484,7 @@ export default function ProjectsPage() {
                 key={project.id} 
                 href={`/projects/${project.id}`}
                 className="block"
+                onMouseEnter={() => router.prefetch(`/projects/${project.id}`)}
               >
                 <Card
                   className={cn(
@@ -619,8 +600,9 @@ export default function ProjectsPage() {
                     key={project.id} 
                     href={`/projects/${project.id}`}
                     className="block"
+                    onMouseEnter={() => router.prefetch(`/projects/${project.id}`)}
                   >
-                    <div className="p-6 border-b border-border/50 last:border-b-0 hover:bg-accent/30 transition-all duration-200 hover:scale-[1.005] hover:shadow-md rounded-lg mx-2 my-1 first:mt-0 last:mb-0">
+                    <div className="p-6 border-b border-border/50 last:border-b-0 hover:bg-accent/30 transition-colors duration-150 rounded-lg mx-2 my-1 first:mt-0 last:mb-0">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4 flex-1 min-w-0">
                           <div className={cn(

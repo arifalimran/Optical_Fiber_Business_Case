@@ -45,9 +45,9 @@
   }
 
   .content-wrap {
-    max-width: 1480px;
+    max-width: 1420px;
     margin-inline: auto;
-    padding: 1.25rem;
+    padding: 0.875rem 1rem;
   }
 
   .surface-card {
@@ -526,5 +526,36 @@
   .dark .modern-input {
     border-color: hsl(var(--border)) !important;
     outline-color: hsl(var(--foreground) / 0.18) !important;
+  }
+
+  .content-wrap .container.mx-auto.p-6 {
+    padding: 1rem !important;
+  }
+
+  .content-wrap .space-y-8 > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 1.25rem !important;
+  }
+
+  .content-wrap .space-y-6 > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 0.9rem !important;
+  }
+
+  .content-wrap .gap-8 {
+    gap: 1.25rem !important;
+  }
+
+  .content-wrap .gap-6 {
+    gap: 1rem !important;
+  }
+
+  .content-wrap .text-muted-foreground {
+    opacity: 0.72;
+  }
+
+  .content-wrap p.text-muted-foreground,
+  .content-wrap .text-xs.text-muted-foreground,
+  .content-wrap .text-sm.text-muted-foreground {
+    font-size: 0.78rem;
+    line-height: 1.1rem;
   }
 }

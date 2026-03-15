@@ -29,14 +29,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
 
-  // Fetch current user on mount (skip if on login page)
+  // Fetch current user once on mount (skip if on login page)
   useEffect(() => {
     if (pathname !== '/login') {
-      fetchUser();
+      void fetchUser();
     } else {
       setLoading(false);
     }
-  }, [pathname]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const fetchUser = async () => {
     try {

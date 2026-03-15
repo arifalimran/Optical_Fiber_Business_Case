@@ -47,8 +47,8 @@ const InputEnhanced = React.forwardRef<HTMLInputElement, InputProps>(
           </div>
         )}
         {hint && !error && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Info className="h-4 w-4" />
+          <div className="flex items-center gap-2 text-xs text-muted-foreground/75">
+            <Info className="h-3.5 w-3.5" />
             <span>{hint}</span>
           </div>
         )}
