@@ -186,7 +186,7 @@ export default function ProjectPage() {
 
     const workflowState = getWorkflowState(project.inputParameters ?? {});
     if (!areAllStepsCompleted(workflowState)) {
-      toast.error('Complete Steps 1-4 before running decision calculation');
+      toast.error('Complete Steps 1-5 before running decision calculation');
       return;
     }
 
@@ -465,7 +465,7 @@ export default function ProjectPage() {
                 
               </div>
               <p className="text-xs text-muted-foreground mt-3">
-                Workflow progress: {workflowProgress}% complete {allStepsDone ? '(ready for calculation)' : '(finish Steps 1-4 to unlock calculation)'}
+                Workflow progress: {workflowProgress}% complete {allStepsDone ? '(ready for calculation)' : '(finish Steps 1-5 to unlock calculation)'}
               </p>
             </CardContent>
           </Card>

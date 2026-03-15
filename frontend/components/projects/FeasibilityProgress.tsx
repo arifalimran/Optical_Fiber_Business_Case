@@ -33,18 +33,23 @@ const STEP_META: Record<
     short: 'Assumptions',
     href: (projectId) => `/projects/${projectId}/assumptions`,
   },
+  revenue: {
+    title: 'Step 2 · Revenue',
+    short: 'Revenue',
+    href: (projectId) => `/projects/${projectId}/revenue`,
+  },
   capex: {
-    title: 'Step 2 · CapEx',
+    title: 'Step 3 · CapEx',
     short: 'CapEx',
     href: (projectId) => `/projects/${projectId}/capex`,
   },
   opex: {
-    title: 'Step 3 · OpEx',
+    title: 'Step 4 · OpEx',
     short: 'OpEx',
     href: (projectId) => `/projects/${projectId}/opex`,
   },
   cashflow: {
-    title: 'Step 4 · Cashflow',
+    title: 'Step 5 · Cashflow',
     short: 'Cashflow',
     href: (projectId) => `/projects/${projectId}/cashflow`,
   },
@@ -70,7 +75,7 @@ export function FeasibilityProgress({ projectId, currentStep, workflowState }: P
         />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
         {FEASIBILITY_STEP_ORDER.map((step) => {
           const done = workflowState[step];
           const accessible = isStepAccessible(step, workflowState);

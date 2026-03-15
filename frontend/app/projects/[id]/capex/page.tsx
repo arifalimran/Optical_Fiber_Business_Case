@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { ChevronDown, ChevronUp, Loader2, Plus, Save, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -47,6 +46,22 @@ type CapexData = {
 
 type SectionKey = keyof CapexData;
 
+const CAPEX_UNIT_OPTIONS = ['pcs', 'set', 'lot', 'machine', 'm', 'km', 'site', 'day', 'month'];
+
+const CAPEX_UNIT_FACTORS: Record<string, number> = {
+  pcs: 1,
+  set: 1,
+  lot: 1,
+  machine: 1,
+  site: 1,
+  m: 1,
+  meter: 1,
+  meters: 1,
+  km: 1000,
+  day: 1,
+  month: 1,
+};
+
 const parseNumberInput = (value: string): number => {
   if (value.trim() === '') {
     return Number.NaN;
@@ -59,6 +74,37 @@ const numberInputValue = (value: number): string => {
     return '';
   }
   return `${value}`;
+};
+
+const safeNumber = (value: number): number => (Number.isFinite(value) ? value : 0);
+
+const getCapexUnitFactor = (unit: string): number => {
+  const normalized = unit.trim().toLowerCase();
+  if (CAPEX_UNIT_FACTORS[normalized] !== undefined) {
+    return CAPEX_UNIT_FACTORS[normalized];
+  }
+  if (normalized.includes('km')) {
+    return 1000;
+  }
+  if (normalized.includes('meter') || normalized === 'm') {
+    return 1;
+  }
+  return 1;
+};
+
+const calculateCapexRowValues = (row: CapexRow) => {
+  const normalizedQuantity = safeNumber(row.quantity) * getCapexUnitFactor(row.unit);
+  const unitRate = safeNumber(row.unitRate);
+  const subtotal = normalizedQuantity * unitRate;
+  const taxAmount = subtotal * (safeNumber(row.taxPercent) / 100);
+  const total = subtotal + taxAmount;
+
+  return {
+    normalizedQuantity,
+    subtotal,
+    taxAmount,
+    total,
+  };
 };
 
 const createRow = (item = '', unit = 'pcs', quantity = 1, unitRate = 0): CapexRow => ({
@@ -216,9 +262,7 @@ export default function CapexStepPage() {
   const totals = useMemo(() => {
     const bySection = (Object.keys(capexData) as SectionKey[]).reduce<Record<SectionKey, number>>((acc, sectionKey) => {
       const sectionTotal = capexData[sectionKey].reduce((sum, row) => {
-        const subtotal = row.quantity * row.unitRate;
-        const taxAmount = subtotal * (row.taxPercent / 100);
-        return sum + subtotal + taxAmount;
+        return sum + calculateCapexRowValues(row).total;
       }, 0);
 
       acc[sectionKey] = sectionTotal;
@@ -245,8 +289,8 @@ export default function CapexStepPage() {
       const currentWorkflow = getWorkflowState(projectData.inputParameters ?? {});
 
       if (!isStepAccessible('capex', currentWorkflow)) {
-        toast.error('Complete Step 1 (Assumptions) before Step 2');
-        router.push(`/projects/${projectId}/assumptions`);
+        toast.error('Complete Step 2 (Revenue) before Step 3');
+        router.push(`/projects/${projectId}/revenue`);
         return;
       }
 
@@ -254,7 +298,7 @@ export default function CapexStepPage() {
       setCapexData(getCapexData(projectData.inputParameters ?? {}));
     } catch (error) {
       console.error('Error loading CapEx page:', error);
-      toast.error('Failed to load Step 2 (CapEx)');
+      toast.error('Failed to load Step 3 (CapEx)');
       router.push(`/projects/${projectId}`);
     } finally {
       setLoading(false);
@@ -306,7 +350,7 @@ export default function CapexStepPage() {
     setShowValidation(true);
 
     if (completeStep && !isStepValid) {
-      toast.error('Fix all red fields before completing Step 2');
+      toast.error('Fix all red fields before completing Step 3');
       return;
     }
 
@@ -341,14 +385,14 @@ export default function CapexStepPage() {
       setProject(updatedProject);
 
       if (completeStep) {
-        toast.success('Step 2 completed. Proceeding to Step 3 (OpEx).');
+        toast.success('Step 3 completed. Proceeding to Step 4 (OpEx).');
         router.push(`/projects/${project.id}/opex`);
       } else {
         toast.success('CapEx saved as draft');
       }
     } catch (error) {
       console.error('Error saving CapEx:', error);
-      toast.error('Unable to save Step 2');
+      toast.error('Unable to save Step 3');
     } finally {
       setSaving(false);
     }
@@ -359,7 +403,7 @@ export default function CapexStepPage() {
       <div className="container mx-auto p-6">
         <div className="flex items-center justify-center min-h-[35vh] gap-2 text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
-          <span>Loading Step 2 (CapEx)...</span>
+          <span>Loading Step 3 (CapEx)...</span>
         </div>
       </div>
     );
@@ -375,11 +419,11 @@ export default function CapexStepPage() {
 
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold">Step 2 · CapEx Matrix</h1>
+          <h1 className="text-xl font-semibold">Step 3 · CapEx Matrix</h1>
           <p className="text-xs text-muted-foreground">Capture all one-time and upfront investment costs with tax-inclusive totals.</p>
         </div>
-        <Link href={`/projects/${project.id}/assumptions`}>
-          <Button variant="outline" size="sm">Back to Step 1</Button>
+        <Link href={`/projects/${project.id}/revenue`}>
+          <Button variant="outline" size="sm">Back to Step 2</Button>
         </Link>
       </div>
 
@@ -440,9 +484,7 @@ export default function CapexStepPage() {
                   const rateError = validationErrors[`${sectionKey}.${row.id}.unitRate`];
                   const taxError = validationErrors[`${sectionKey}.${row.id}.taxPercent`];
 
-                  const rowSubtotal = row.quantity * row.unitRate;
-                  const rowTaxAmount = rowSubtotal * (row.taxPercent / 100);
-                  const rowTotal = rowSubtotal + rowTaxAmount;
+                  const rowValues = calculateCapexRowValues(row);
 
                   return (
                     <div key={row.id} className="rounded-lg border p-2.5 bg-background/70 space-y-2">
@@ -470,11 +512,18 @@ export default function CapexStepPage() {
 
                         <div className="md:col-span-1 space-y-1">
                           <Label className="text-[11px] text-muted-foreground">Unit</Label>
-                          <Input
+                          <select
                             value={row.unit}
                             onChange={(event) => updateRow(sectionKey, row.id, 'unit', event.target.value)}
-                            className="h-8 text-xs"
-                          />
+                            className="w-full h-8 rounded-md border border-input bg-background px-2 text-xs"
+                          >
+                            {!CAPEX_UNIT_OPTIONS.includes(row.unit) && row.unit.trim() && (
+                              <option value={row.unit}>{row.unit}</option>
+                            )}
+                            {CAPEX_UNIT_OPTIONS.map((option) => (
+                              <option key={option} value={option}>{option}</option>
+                            ))}
+                          </select>
                         </div>
 
                         <div className="md:col-span-2 space-y-1">
@@ -527,7 +576,7 @@ export default function CapexStepPage() {
                           className="h-7 text-[11px] max-w-md"
                           placeholder="Notes / assumptions"
                         />
-                        <div className="font-medium text-foreground">Line Total: {rowTotal.toLocaleString()}</div>
+                        <div className="font-medium text-foreground">Line Total: {rowValues.total.toLocaleString()}</div>
                       </div>
                     </div>
                   );
@@ -544,14 +593,14 @@ export default function CapexStepPage() {
 
       <div className="flex flex-wrap justify-between items-center gap-2 pt-1">
         <div className="text-xs text-muted-foreground">
-          {isStepValid ? 'Step 2 validation passed.' : 'Step 2 has missing or invalid fields.'}
+          {isStepValid ? 'Step 3 validation passed.' : 'Step 3 has missing or invalid fields.'}
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => saveCapex(false)} disabled={saving}>
             {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />} Save Draft
           </Button>
           <Button onClick={() => saveCapex(true)} disabled={saving}>
-            Complete Step 2
+            Complete Step 3
           </Button>
         </div>
       </div>

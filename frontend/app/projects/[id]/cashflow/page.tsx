@@ -133,13 +133,18 @@ const parseCashflowData = (inputParameters: Record<string, unknown>): CashflowDa
   if (!raw || typeof raw !== 'object') {
     const capexTotal = Number((inputParameters.capexSummary as { total?: unknown } | undefined)?.total ?? 0);
     const opexTotal = Number((inputParameters.opexSummary as { total?: unknown } | undefined)?.total ?? 0);
-    const grossRevenue = Number(inputParameters.estimated_revenue ?? 0);
+    const grossRevenue = Number((inputParameters.revenueSummary as { grossTotal?: unknown } | undefined)?.grossTotal ?? inputParameters.estimated_revenue ?? 0);
+    const netReceivable = Number((inputParameters.revenueSummary as { netReceivable?: unknown } | undefined)?.netReceivable ?? 0);
 
     return {
       ...DEFAULT_CASHFLOW,
       settings: {
         ...DEFAULT_CASHFLOW.settings,
-        estimatedContractValue: grossRevenue > 0 ? grossRevenue : DEFAULT_CASHFLOW.settings.estimatedContractValue,
+        estimatedContractValue: netReceivable > 0
+          ? netReceivable
+          : grossRevenue > 0
+            ? grossRevenue
+            : DEFAULT_CASHFLOW.settings.estimatedContractValue,
         durationMonths: Math.max(1, Number(inputParameters.project_duration_months ?? DEFAULT_CASHFLOW.settings.durationMonths)),
         workingCapitalBuffer: Math.max(200000, Math.round((capexTotal + opexTotal) * 0.05)),
       },
@@ -362,7 +367,7 @@ export default function CashflowStepPage() {
       const currentWorkflow = getWorkflowState(projectData.inputParameters ?? {});
 
       if (!isStepAccessible('cashflow', currentWorkflow)) {
-        toast.error('Complete Step 3 (OpEx) before Step 4');
+        toast.error('Complete Step 4 (OpEx) before Step 5');
         router.push(`/projects/${projectId}/opex`);
         return;
       }
@@ -371,7 +376,7 @@ export default function CashflowStepPage() {
       setCashflowData(parseCashflowData(projectData.inputParameters ?? {}));
     } catch (error) {
       console.error('Error loading Cashflow page:', error);
-      toast.error('Failed to load Step 4 (Cashflow)');
+      toast.error('Failed to load Step 5 (Cashflow)');
       router.push(`/projects/${projectId}`);
     } finally {
       setLoading(false);
@@ -427,7 +432,7 @@ export default function CashflowStepPage() {
     setShowValidation(true);
 
     if (completeStep && !isStepValid) {
-      toast.error('Fix all validation errors before completing Step 4');
+      toast.error('Fix all validation errors before completing Step 5');
       return;
     }
 
@@ -456,21 +461,21 @@ export default function CashflowStepPage() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to save Step 4');
+        throw new Error('Failed to save Step 5');
       }
 
       const updatedProject: Project = await response.json();
       setProject(updatedProject);
 
       if (completeStep) {
-        toast.success('Step 4 completed. Final decision calculation is now enabled.');
+        toast.success('Step 5 completed. Final decision calculation is now enabled.');
         router.push(`/projects/${project.id}`);
       } else {
         toast.success('Cashflow draft saved');
       }
     } catch (error) {
       console.error('Error saving cashflow data:', error);
-      toast.error('Unable to save Step 4');
+      toast.error('Unable to save Step 5');
     } finally {
       setSaving(false);
     }
@@ -481,7 +486,7 @@ export default function CashflowStepPage() {
       <div className="container mx-auto p-6">
         <div className="flex items-center justify-center min-h-[35vh] gap-2 text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
-          <span>Loading Step 4 (Cashflow)...</span>
+          <span>Loading Step 5 (Cashflow)...</span>
         </div>
       </div>
     );
@@ -499,11 +504,11 @@ export default function CashflowStepPage() {
 
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold">Step 4 · Cashflow Matrix</h1>
+          <h1 className="text-xl font-semibold">Step 5 · Cashflow Matrix</h1>
           <p className="text-xs text-muted-foreground">Model inflows, outflows, financing timing, and cumulative cash to avoid liquidity surprises.</p>
         </div>
         <Link href={`/projects/${project.id}/opex`}>
-          <Button variant="outline" size="sm">Back to Step 3</Button>
+          <Button variant="outline" size="sm">Back to Step 4</Button>
         </Link>
       </div>
 
@@ -827,14 +832,14 @@ export default function CashflowStepPage() {
 
       <div className="flex flex-wrap justify-between items-center gap-2 pt-1">
         <div className="text-xs text-muted-foreground">
-          {finalReady ? 'All steps completed. Decision calculation can now run.' : 'Complete all four steps to enable decision calculation.'}
+          {finalReady ? 'All steps completed. Decision calculation can now run.' : 'Complete all five steps to enable decision calculation.'}
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => saveCashflow(false)} disabled={saving}>
             {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />} Save Draft
           </Button>
           <Button onClick={() => saveCashflow(true)} disabled={saving}>
-            Complete Step 4
+            Complete Step 5
           </Button>
           <Link href={`/projects/${project.id}`}>
             <Button variant="outline" disabled={!finalReady}>Go to Decision</Button>

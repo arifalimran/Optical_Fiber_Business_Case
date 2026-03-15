@@ -64,6 +64,15 @@ const numberInputValue = (value: number): string => {
   return `${value}`;
 };
 
+const safeNumber = (value: number): number => (Number.isFinite(value) ? value : 0);
+
+const durationUnitLabel = (frequency: Frequency): string => {
+  if (frequency === 'daily') return 'Days';
+  if (frequency === 'weekly') return 'Weeks';
+  if (frequency === 'monthly') return 'Months';
+  return 'Once';
+};
+
 const createRow = (
   item = '',
   frequency: Frequency = 'monthly',
@@ -138,18 +147,48 @@ const SECTION_META: Record<SectionKey, { title: string; description: string }> =
   },
 };
 
-const frequencyMultiplier = (frequency: Frequency): number => {
-  if (frequency === 'daily') return 30;
-  if (frequency === 'weekly') return 4.345;
-  if (frequency === 'monthly') return 1;
-  return 1;
-};
-
 const frequencyRateLabel = (frequency: Frequency): string => {
   if (frequency === 'daily') return 'Daily Rate';
   if (frequency === 'weekly') return 'Weekly Rate';
   if (frequency === 'monthly') return 'Monthly Rate';
   return 'One-time Amount';
+};
+
+const getFrequencyUnits = (frequency: Frequency, unitValue: number): number => {
+  const safeUnitValue = Math.max(0, safeNumber(unitValue));
+
+  if (frequency === 'one-time') {
+    return 1;
+  }
+
+  return safeUnitValue;
+};
+
+const getMonthEquivalent = (frequency: Frequency, unitValue: number): number => {
+  const safeUnitValue = Math.max(0, safeNumber(unitValue));
+
+  if (frequency === 'one-time') {
+    return 0;
+  }
+
+  if (frequency === 'daily') {
+    return safeUnitValue / 30;
+  }
+
+  if (frequency === 'weekly') {
+    return safeUnitValue / 4;
+  }
+
+  return safeUnitValue;
+};
+
+const calculateOpexRowTotal = (row: OpexRow): number => {
+  const normalizedQuantity = safeNumber(row.quantity);
+  const unitRate = safeNumber(row.unitRate);
+  const cycles = getFrequencyUnits(row.frequency, safeNumber(row.durationMonths));
+  const monthEquivalent = getMonthEquivalent(row.frequency, safeNumber(row.durationMonths));
+  const escalationFactor = 1 + (safeNumber(row.escalationPercent) / 100) * Math.max(0, monthEquivalent / 12);
+  return normalizedQuantity * unitRate * cycles * escalationFactor;
 };
 
 const getOpexData = (inputParameters: Record<string, unknown>): OpexData => {
@@ -212,7 +251,6 @@ export default function OpexStepPage() {
     overheads: false,
     maintenanceRisk: false,
   });
-
   useEffect(() => {
     if (projectId) {
       void loadPage();
@@ -243,8 +281,8 @@ export default function OpexStepPage() {
         if (!Number.isFinite(row.unitRate) || row.unitRate < 0) {
           errors[`${sectionKey}.${row.id}.unitRate`] = 'Rate cannot be negative';
         }
-        if (!Number.isFinite(row.durationMonths) || row.durationMonths < 1 || row.durationMonths > 60) {
-          errors[`${sectionKey}.${row.id}.durationMonths`] = 'Duration should be between 1 and 60';
+        if (!Number.isFinite(row.durationMonths) || row.durationMonths < 1 || row.durationMonths > 365) {
+          errors[`${sectionKey}.${row.id}.durationMonths`] = 'Unit should be between 1 and 365';
         }
         if (!Number.isFinite(row.escalationPercent) || row.escalationPercent < -100 || row.escalationPercent > 100) {
           errors[`${sectionKey}.${row.id}.escalationPercent`] = 'Escalation should be between -100 and 100';
@@ -260,10 +298,7 @@ export default function OpexStepPage() {
   const totals = useMemo(() => {
     const bySection = (Object.keys(opexData) as SectionKey[]).reduce<Record<SectionKey, number>>((acc, sectionKey) => {
       const sectionTotal = opexData[sectionKey].reduce((sum, row) => {
-        const base = row.quantity * row.unitRate;
-        const cycles = row.frequency === 'one-time' ? 1 : frequencyMultiplier(row.frequency) * row.durationMonths;
-        const escalationFactor = 1 + (row.escalationPercent / 100) * Math.max(0, row.durationMonths / 12);
-        return sum + base * cycles * escalationFactor;
+        return sum + calculateOpexRowTotal(row);
       }, 0);
       acc[sectionKey] = sectionTotal;
       return acc;
@@ -292,7 +327,7 @@ export default function OpexStepPage() {
       const currentWorkflow = getWorkflowState(projectData.inputParameters ?? {});
 
       if (!isStepAccessible('opex', currentWorkflow)) {
-        toast.error('Complete Step 2 (CapEx) before Step 3');
+        toast.error('Complete Step 3 (CapEx) before Step 4');
         router.push(`/projects/${projectId}/capex`);
         return;
       }
@@ -301,7 +336,7 @@ export default function OpexStepPage() {
       setOpexData(getOpexData(projectData.inputParameters ?? {}));
     } catch (error) {
       console.error('Error loading OpEx page:', error);
-      toast.error('Failed to load Step 3 (OpEx)');
+      toast.error('Failed to load Step 4 (OpEx)');
       router.push(`/projects/${projectId}`);
     } finally {
       setLoading(false);
@@ -328,6 +363,7 @@ export default function OpexStepPage() {
           return {
             ...row,
             frequency: normalized,
+            durationMonths: normalized === 'one-time' ? 1 : row.durationMonths,
           };
         }
 
@@ -361,7 +397,7 @@ export default function OpexStepPage() {
     setShowValidation(true);
 
     if (completeStep && !isStepValid) {
-      toast.error('Fix all red fields before completing Step 3');
+      toast.error('Fix all red fields before completing Step 4');
       return;
     }
 
@@ -397,14 +433,14 @@ export default function OpexStepPage() {
       setProject(updatedProject);
 
       if (completeStep) {
-        toast.success('Step 3 completed. Proceeding to Step 4 (Cashflow).');
+        toast.success('Step 4 completed. Proceeding to Step 5 (Cashflow).');
         router.push(`/projects/${project.id}/cashflow`);
       } else {
         toast.success('OpEx saved as draft');
       }
     } catch (error) {
       console.error('Error saving OpEx:', error);
-      toast.error('Unable to save Step 3');
+      toast.error('Unable to save Step 4');
     } finally {
       setSaving(false);
     }
@@ -415,7 +451,7 @@ export default function OpexStepPage() {
       <div className="container mx-auto p-6">
         <div className="flex items-center justify-center min-h-[35vh] gap-2 text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
-          <span>Loading Step 3 (OpEx)...</span>
+          <span>Loading Step 4 (OpEx)...</span>
         </div>
       </div>
     );
@@ -431,18 +467,18 @@ export default function OpexStepPage() {
 
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold">Step 3 · OpEx Matrix</h1>
+          <h1 className="text-xl font-semibold">Step 4 · OpEx Matrix</h1>
           <p className="text-xs text-muted-foreground">Define recurring operating costs with frequency, duration, and escalation for realistic projections.</p>
         </div>
         <Link href={`/projects/${project.id}/capex`}>
-          <Button variant="outline" size="sm">Back to Step 2</Button>
+          <Button variant="outline" size="sm">Back to Step 3</Button>
         </Link>
       </div>
 
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-sm">Operational Summary</CardTitle>
-          <CardDescription className="text-xs">Live estimate from Step 3 rows</CardDescription>
+          <CardDescription className="text-xs">Live estimate from Step 4 rows</CardDescription>
         </CardHeader>
         <CardContent className="pt-0">
           <div className="grid grid-cols-2 md:grid-cols-6 gap-2 text-xs">
@@ -497,16 +533,12 @@ export default function OpexStepPage() {
                   const rateError = validationErrors[`${sectionKey}.${row.id}.unitRate`];
                   const durationError = validationErrors[`${sectionKey}.${row.id}.durationMonths`];
                   const escalationError = validationErrors[`${sectionKey}.${row.id}.escalationPercent`];
-
-                  const base = row.quantity * row.unitRate;
-                  const cycles = row.frequency === 'one-time' ? 1 : frequencyMultiplier(row.frequency) * row.durationMonths;
-                  const escalationFactor = 1 + (row.escalationPercent / 100) * Math.max(0, row.durationMonths / 12);
-                  const rowTotal = base * cycles * escalationFactor;
+                  const rowTotal = calculateOpexRowTotal(row);
 
                   return (
-                    <div key={row.id} className="rounded-lg border p-2.5 bg-background/70 space-y-2">
-                      <div className="grid grid-cols-1 md:grid-cols-12 gap-2 items-start">
-                        <div className="md:col-span-3 space-y-1">
+                    <div key={row.id} className="rounded-lg border p-3.5 bg-background/70 space-y-3">
+                      <div className="grid grid-cols-1 md:[grid-template-columns:repeat(16,minmax(0,1fr))] gap-3 items-start">
+                        <div className="md:col-span-4 space-y-1">
                           <Label className="text-[11px] text-muted-foreground">Cost Item</Label>
                           <Input
                             value={row.item}
@@ -516,23 +548,13 @@ export default function OpexStepPage() {
                           />
                         </div>
 
-                        <div className="md:col-span-1 space-y-1">
+                        <div className="md:col-span-2 space-y-1">
                           <Label className="text-[11px] text-muted-foreground">Qty</Label>
                           <Input
                             type="number"
                             value={numberInputValue(row.quantity)}
                             onChange={(event) => updateRow(sectionKey, row.id, 'quantity', event.target.value)}
                             className={cn('h-8 text-xs', showValidation && quantityError && 'border-destructive focus-visible:ring-destructive')}
-                          />
-                        </div>
-
-                        <div className="md:col-span-2 space-y-1">
-                          <Label className="text-[11px] text-muted-foreground">{frequencyRateLabel(row.frequency)}</Label>
-                          <Input
-                            type="number"
-                            value={numberInputValue(row.unitRate)}
-                            onChange={(event) => updateRow(sectionKey, row.id, 'unitRate', event.target.value)}
-                            className={cn('h-8 text-xs', showValidation && rateError && 'border-destructive focus-visible:ring-destructive')}
                           />
                         </div>
 
@@ -550,13 +572,26 @@ export default function OpexStepPage() {
                           </select>
                         </div>
 
-                        <div className="md:col-span-1 space-y-1">
-                          <Label className="text-[11px] text-muted-foreground">Months</Label>
+                        <div className="md:col-span-2 space-y-1">
+                          <Label className="text-[11px] text-muted-foreground">Rate</Label>
                           <Input
                             type="number"
-                            value={numberInputValue(row.durationMonths)}
+                            value={numberInputValue(row.unitRate)}
+                            onChange={(event) => updateRow(sectionKey, row.id, 'unitRate', event.target.value)}
+                            className={cn('h-8 text-xs', showValidation && rateError && 'border-destructive focus-visible:ring-destructive')}
+                            placeholder={frequencyRateLabel(row.frequency)}
+                          />
+                        </div>
+
+                        <div className="md:col-span-2 space-y-1">
+                          <Label className="text-[11px] text-muted-foreground">Unit ({durationUnitLabel(row.frequency)})</Label>
+                          <Input
+                            type="number"
+                            value={row.frequency === 'one-time' ? '1' : numberInputValue(row.durationMonths)}
                             onChange={(event) => updateRow(sectionKey, row.id, 'durationMonths', event.target.value)}
                             className={cn('h-8 text-xs', showValidation && durationError && 'border-destructive focus-visible:ring-destructive')}
+                            disabled={row.frequency === 'one-time'}
+                            placeholder={durationUnitLabel(row.frequency)}
                           />
                         </div>
 
@@ -567,16 +602,6 @@ export default function OpexStepPage() {
                             value={numberInputValue(row.escalationPercent)}
                             onChange={(event) => updateRow(sectionKey, row.id, 'escalationPercent', event.target.value)}
                             className={cn('h-8 text-xs', showValidation && escalationError && 'border-destructive focus-visible:ring-destructive')}
-                          />
-                        </div>
-
-                        <div className="md:col-span-1 space-y-1">
-                          <Label className="text-[11px] text-muted-foreground">Owner</Label>
-                          <Input
-                            value={row.owner}
-                            onChange={(event) => updateRow(sectionKey, row.id, 'owner', event.target.value)}
-                            className="h-8 text-xs"
-                            placeholder="Optional"
                           />
                         </div>
 
@@ -593,14 +618,29 @@ export default function OpexStepPage() {
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-                        <Input
-                          value={row.notes}
-                          onChange={(event) => updateRow(sectionKey, row.id, 'notes', event.target.value)}
-                          className="h-7 text-[11px] max-w-md"
-                          placeholder="Notes / assumptions"
-                        />
-                        <div className="font-medium text-foreground">Line Total: {rowTotal.toLocaleString()}</div>
+                      <div className="grid grid-cols-1 md:grid-cols-12 gap-2 items-center text-[11px] text-muted-foreground">
+                        <div className="md:col-span-6">
+                          <Input
+                            value={row.notes}
+                            onChange={(event) => updateRow(sectionKey, row.id, 'notes', event.target.value)}
+                            className="h-7 text-[11px]"
+                            placeholder="Comments / assumptions"
+                          />
+                        </div>
+                        <div className="md:col-span-3">
+                          <Input
+                            value={row.owner}
+                            onChange={(event) => updateRow(sectionKey, row.id, 'owner', event.target.value)}
+                            className="h-7 text-[11px]"
+                            placeholder="Owner"
+                          />
+                        </div>
+                        <div className="md:col-span-3 text-right">
+                          <div className="font-medium text-foreground">Line Total: {rowTotal.toLocaleString()}</div>
+                          <div className="text-[10px] text-muted-foreground">
+                            Formula: Qty × Rate × FrequencyUnit × Escalation
+                          </div>
+                        </div>
                       </div>
                     </div>
                   );
@@ -617,14 +657,14 @@ export default function OpexStepPage() {
 
       <div className="flex flex-wrap justify-between items-center gap-2 pt-1">
         <div className="text-xs text-muted-foreground">
-          {isStepValid ? 'Step 3 validation passed.' : 'Step 3 has missing or invalid fields.'}
+          {isStepValid ? 'Step 4 validation passed.' : 'Step 4 has missing or invalid fields.'}
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => saveOpex(false)} disabled={saving}>
             {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />} Save Draft
           </Button>
           <Button onClick={() => saveOpex(true)} disabled={saving}>
-            Complete Step 3
+            Complete Step 4
           </Button>
         </div>
       </div>

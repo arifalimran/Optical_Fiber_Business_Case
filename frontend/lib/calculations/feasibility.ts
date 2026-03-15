@@ -99,6 +99,50 @@ const nestedNumberValue = (
   return fallback;
 };
 
+const revenueFromDynamicRows = (assumptions: Assumptions) => {
+  const raw = assumptions.revenueData;
+  if (!raw || typeof raw !== 'object') {
+    return null;
+  }
+
+  const data = raw as {
+    rows?: Array<{ quantity?: unknown; unitRate?: unknown }>;
+    settings?: { vatPercent?: unknown; taxPercent?: unknown };
+  };
+
+  if (!Array.isArray(data.rows) || data.rows.length === 0) {
+    return null;
+  }
+
+  const grossRevenue = data.rows.reduce((sum, row) => {
+    const quantity = typeof row.quantity === 'number' ? row.quantity : Number(row.quantity ?? 0);
+    const unitRate = typeof row.unitRate === 'number' ? row.unitRate : Number(row.unitRate ?? 0);
+    const safeQuantity = Number.isFinite(quantity) ? quantity : 0;
+    const safeRate = Number.isFinite(unitRate) ? unitRate : 0;
+    return sum + safeQuantity * safeRate;
+  }, 0);
+
+  const vatPercentRaw = typeof data.settings?.vatPercent === 'number'
+    ? data.settings.vatPercent
+    : Number(data.settings?.vatPercent ?? Number.NaN);
+  const taxPercentRaw = typeof data.settings?.taxPercent === 'number'
+    ? data.settings.taxPercent
+    : Number(data.settings?.taxPercent ?? Number.NaN);
+
+  const vatPercent = Number.isFinite(vatPercentRaw) ? vatPercentRaw : 10;
+  const taxPercent = Number.isFinite(taxPercentRaw) ? taxPercentRaw : 5;
+  const vat = grossRevenue * (vatPercent / 100);
+  const incomeTax = grossRevenue * (taxPercent / 100);
+  const netRevenue = grossRevenue - vat - incomeTax;
+
+  return {
+    grossRevenue,
+    vat,
+    incomeTax,
+    netRevenue,
+  };
+};
+
 const scenarioResult = (name: ScenarioResult['name'], totalCost: number, grossRevenue: number): ScenarioResult => {
   const netRevenue = grossRevenue * 0.85;
   const netProfit = netRevenue - totalCost;
@@ -225,10 +269,37 @@ const calculateFiber = (assumptions: Assumptions): CalculationOutput => {
   const insurance = beforeInsurance * 0.01;
   const totalCost = beforeInsurance + insurance;
 
-  const grossRevenue = undergroundLength * 250 + totalVerticalMeters * 180 + totalCores * 70 + overheadLength * 120;
-  const vat = grossRevenue * 0.1;
-  const incomeTax = grossRevenue * 0.05;
-  const netRevenue = grossRevenue - vat - incomeTax;
+  const dynamicRevenue = revenueFromDynamicRows(assumptions);
+  const legacyGrossRevenue = undergroundLength * 250 + totalVerticalMeters * 180 + totalCores * 70 + overheadLength * 120;
+  const revenueSummaryGross = nestedNumberValue(assumptions, 'revenueSummary', 'grossTotal');
+  const grossRevenue = dynamicRevenue
+    ? dynamicRevenue.grossRevenue
+    : Number.isFinite(revenueSummaryGross)
+      ? revenueSummaryGross
+      : legacyGrossRevenue;
+
+  const revenueSummaryVat = nestedNumberValue(assumptions, 'revenueSummary', 'vatAmount');
+  const revenueSummaryTax = nestedNumberValue(assumptions, 'revenueSummary', 'taxAmount');
+  const revenueSummaryNet = nestedNumberValue(assumptions, 'revenueSummary', 'netReceivable');
+
+  const vatPercent = numberValue(assumptions, 'vat_percentage', 10);
+  const taxPercent = numberValue(assumptions, 'income_tax_percentage', 5);
+
+  const vat = dynamicRevenue
+    ? dynamicRevenue.vat
+    : Number.isFinite(revenueSummaryVat)
+      ? revenueSummaryVat
+      : grossRevenue * (vatPercent / 100);
+  const incomeTax = dynamicRevenue
+    ? dynamicRevenue.incomeTax
+    : Number.isFinite(revenueSummaryTax)
+      ? revenueSummaryTax
+      : grossRevenue * (taxPercent / 100);
+  const netRevenue = dynamicRevenue
+    ? dynamicRevenue.netRevenue
+    : Number.isFinite(revenueSummaryNet)
+      ? revenueSummaryNet
+      : grossRevenue - vat - incomeTax;
   const netProfit = netRevenue - totalCost;
   const profitMargin = grossRevenue > 0 ? (netProfit / grossRevenue) * 100 : 0;
 
@@ -347,16 +418,43 @@ const calculateTower = (assumptions: Assumptions): CalculationOutput => {
 
   const totalCost = oneTimeCost + monthlyCost + dailyCost + financing + insurance;
 
+  const dynamicRevenue = revenueFromDynamicRows(assumptions);
   const towerRevenue =
     90000 +
     (requiresPowerUpgrade ? 15000 : 0) +
     (requiresMicrowaveUpgrade ? 30000 : 0) +
     (requiresAntennaUpgrade ? 20000 : 0) +
     (includesTesting ? 18000 : 0);
-  const grossRevenue = numberOfTowers * towerRevenue;
-  const vat = grossRevenue * 0.1;
-  const incomeTax = grossRevenue * 0.05;
-  const netRevenue = grossRevenue - vat - incomeTax;
+  const legacyGrossRevenue = numberOfTowers * towerRevenue;
+  const revenueSummaryGross = nestedNumberValue(assumptions, 'revenueSummary', 'grossTotal');
+  const grossRevenue = dynamicRevenue
+    ? dynamicRevenue.grossRevenue
+    : Number.isFinite(revenueSummaryGross)
+      ? revenueSummaryGross
+      : legacyGrossRevenue;
+
+  const revenueSummaryVat = nestedNumberValue(assumptions, 'revenueSummary', 'vatAmount');
+  const revenueSummaryTax = nestedNumberValue(assumptions, 'revenueSummary', 'taxAmount');
+  const revenueSummaryNet = nestedNumberValue(assumptions, 'revenueSummary', 'netReceivable');
+
+  const vatPercent = numberValue(assumptions, 'vat_percentage', 10);
+  const taxPercent = numberValue(assumptions, 'income_tax_percentage', 5);
+
+  const vat = dynamicRevenue
+    ? dynamicRevenue.vat
+    : Number.isFinite(revenueSummaryVat)
+      ? revenueSummaryVat
+      : grossRevenue * (vatPercent / 100);
+  const incomeTax = dynamicRevenue
+    ? dynamicRevenue.incomeTax
+    : Number.isFinite(revenueSummaryTax)
+      ? revenueSummaryTax
+      : grossRevenue * (taxPercent / 100);
+  const netRevenue = dynamicRevenue
+    ? dynamicRevenue.netRevenue
+    : Number.isFinite(revenueSummaryNet)
+      ? revenueSummaryNet
+      : grossRevenue - vat - incomeTax;
   const netProfit = netRevenue - totalCost;
   const profitMargin = grossRevenue > 0 ? (netProfit / grossRevenue) * 100 : 0;
 

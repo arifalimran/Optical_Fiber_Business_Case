@@ -1,11 +1,12 @@
-export type FeasibilityStep = 'assumptions' | 'capex' | 'opex' | 'cashflow';
+export type FeasibilityStep = 'assumptions' | 'revenue' | 'capex' | 'opex' | 'cashflow';
 
 export type FeasibilityWorkflowState = Record<FeasibilityStep, boolean>;
 
-export const FEASIBILITY_STEP_ORDER: FeasibilityStep[] = ['assumptions', 'capex', 'opex', 'cashflow'];
+export const FEASIBILITY_STEP_ORDER: FeasibilityStep[] = ['assumptions', 'revenue', 'capex', 'opex', 'cashflow'];
 
 export const DEFAULT_WORKFLOW_STATE: FeasibilityWorkflowState = {
   assumptions: false,
+  revenue: false,
   capex: false,
   opex: false,
   cashflow: false,
@@ -25,6 +26,7 @@ export const getWorkflowState = (inputParameters: unknown): FeasibilityWorkflowS
 
   return {
     assumptions: Boolean(workflow.assumptions),
+    revenue: Boolean(workflow.revenue),
     capex: Boolean(workflow.capex),
     opex: Boolean(workflow.opex),
     cashflow: Boolean(workflow.cashflow),

@@ -12,7 +12,6 @@ import { getWorkflowState, isStepAccessible, type FeasibilityStep, type Feasibil
 import {
   LayoutDashboard,
   FileText,
-  Calculator,
   Settings,
   BarChart3,
   FolderKanban,
@@ -74,6 +73,12 @@ const getProjectMenuItems = (projectId: string) => [
     step: 'assumptions' as FeasibilityStep,
   },
   {
+    title: "Revenue",
+    icon: TrendingUp,
+    href: `/projects/${projectId}/revenue`,
+    step: 'revenue' as FeasibilityStep,
+  },
+  {
     title: "CapEx",
     icon: Building2,
     href: `/projects/${projectId}/capex`,
@@ -84,11 +89,6 @@ const getProjectMenuItems = (projectId: string) => [
     icon: DollarSign,
     href: `/projects/${projectId}/opex`,
     step: 'opex' as FeasibilityStep,
-  },
-  {
-    title: "Revenue",
-    icon: TrendingUp,
-    href: `/projects/${projectId}/revenue`,
   },
   {
     title: "Cashflow",
@@ -154,7 +154,7 @@ export function Sidebar() {
     }
 
     return new Set<FeasibilityStep>(
-      (['assumptions', 'capex', 'opex', 'cashflow'] as FeasibilityStep[]).filter((step) => workflowState[step])
+      (['assumptions', 'revenue', 'capex', 'opex', 'cashflow'] as FeasibilityStep[]).filter((step) => workflowState[step])
     );
   }, [workflowState]);
 

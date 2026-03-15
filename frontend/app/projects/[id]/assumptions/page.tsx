@@ -365,7 +365,7 @@ export default function ProjectAssumptionsPage() {
 
       if (completeStep) {
         toast.success('Step 1 completed');
-        router.push(`/projects/${project.id}/capex`);
+        router.push(`/projects/${project.id}/revenue`);
       } else {
         toast.success('Assumptions draft saved');
       }
